@@ -135,6 +135,12 @@ function build(){
   const unplaced=P.vols.flatMap(v=>(v.unplaced||[]).map(x=>({冊:`第${CN[v.n-1]}冊`,...x})));
   const ledger=(P.ledger&&P.ledger.rows)||[];
   const decisions=P.decisions||[];
+  /* 人物事例掛在每一冊底下的 v.people，不是頂層欄位 */
+  const people=P.vols.flatMap(v=>(v.people||[]).map(x=>(
+    {vol:`第${CN[v.n-1]}冊`, volN:v.n, stage:v.stage||'', ...x})));
+  const verdicts={};
+  people.forEach(x=>{const k=x.verdict||'（未判定）';verdicts[k]=(verdicts[k]||0)+1;});
+  const pending=people.filter(x=>x.verdict==='待主編確認');
   const a=$('#app'); a.classList.remove('hide'); $('#gate').classList.add('hide');
 
   let h=`<h1>A 線分析報告</h1><p class="sub">產生時間　${new Date().toLocaleString('zh-TW')}</p>`;
@@ -145,12 +151,15 @@ function build(){
     ${kpi('素材不足（thin）',thin.length,thin.length>0)}
     ${kpi('完全未掛素材',zero.length,zero.length>0)}
     ${kpi('公案總帳',ledger.length)}
+    ${kpi('人物事例',people.length)}
+    ${kpi('待主編確認',pending.length,pending.length>0)}
     ${kpi('待裁示',decisions.length)}
   </div>`;
 
   h+=`<div class="tools">
     <button id="dlCsv">下載對照表 CSV</button>
     <button id="dlMd" class="ghost">下載完整報告 Markdown</button>
+    <button id="dlPpl" class="ghost">下載人物事例 CSV</button>
     <button id="dlJson" class="ghost">下載攤平 JSON</button>
     <span class="sub">　CSV 可直接丟進 Excel 或 Google 試算表分工</span>
   </div>`;
@@ -204,6 +213,24 @@ function build(){
     h+='<details open><summary>統計</summary>'+autoTable([P.ledger.stats])+'</details>';
   h+=autoTable(ledger,200);
 
+  /* 人物事例 */
+  h+=`<h2>人物事例　<span class="pill">${people.length} 則</span>`+
+     (pending.length?`<span class="pill w">${pending.length} 則待主編確認</span>`:'')+`</h2>`;
+  h+='<table><tr><th>判定</th><th>則數</th></tr>'+
+    Object.entries(verdicts).sort((a,b)=>b[1]-a[1])
+      .map(([k,n])=>`<tr${k==='待主編確認'?' class="thin"':''}><td>${esc(k)}</td><td>${n}</td></tr>`)
+      .join('')+'</table>';
+  h+='<p class="sub">判準：只排除「在家眾的現場／當代事例」。'+
+     '「待主編確認」者需到協作台〈待裁示〉逐則決定，此處只列出清單。</p>';
+  h+='<div class="scroll"><table><tr><th style="width:70px">冊</th><th style="width:90px">判定</th>'+
+     '<th style="width:110px">類別</th><th>事例</th><th>出處</th><th>排除後改用什麼承擔</th></tr>'+
+    people.map(x=>`<tr${x.verdict==='待主編確認'?' class="thin"':''}>`+
+      `<td>${x.vol}<br><span class="sub">${esc(x.stage)}</span></td>`+
+      `<td>${esc(x.verdict)}</td><td class="sub">${esc(x.cat)}</td>`+
+      `<td>${esc(x.title)}</td><td class="sub">${esc(x.src||'')}</td>`+
+      `<td class="sub">${esc(x.replacement==='不需替代'?'':(x.replacement||''))}</td></tr>`).join('')+
+    '</table></div>';
+
   /* 待裁示 */
   const kinds={};
   decisions.forEach(d=>{kinds[d.kind||'（未分類）']=(kinds[d.kind||'（未分類）']||0)+1;});
@@ -216,8 +243,20 @@ function build(){
 
   a.innerHTML=h;
   $('#dlCsv').onclick=()=>dl('對照表.csv',toCsv(),'text/csv');
-  $('#dlMd').onclick=()=>dl('A線分析報告.md',toMd(thin,zero,unplaced,gaps,ledger,decisions,kinds),'text/markdown');
-  $('#dlJson').onclick=()=>dl('攤平骨架.json',JSON.stringify(FLAT,null,2),'application/json');
+  $('#dlMd').onclick=()=>dl('A線分析報告.md',
+    toMd(thin,zero,unplaced,gaps,ledger,decisions,kinds,people,verdicts),'text/markdown');
+  $('#dlPpl').onclick=()=>dl('人物事例.csv',toPeopleCsv(people),'text/csv');
+  $('#dlJson').onclick=()=>dl('攤平骨架.json',
+    JSON.stringify({sections:FLAT,people:people},null,2),'application/json');
+}
+
+function toPeopleCsv(people){
+  const q=s=>'"'+String(s==null?'':s).replace(/"/g,'""')+'"';
+  const head=['冊','階位','判定','類別','事例','出處','排除後改用什麼承擔'];
+  const rows=[head.map(q).join(',')];
+  people.forEach(x=>rows.push([x.vol,x.stage,x.verdict,x.cat,x.title,x.src,
+    x.replacement==='不需替代'?'':x.replacement].map(q).join(',')));
+  return '﻿'+rows.join('\r\n');
 }
 
 function toCsv(){
@@ -237,7 +276,7 @@ function toCsv(){
   return '﻿'+rows.join('\r\n');   // BOM：讓 Excel 正確辨識 UTF-8
 }
 
-function toMd(thin,zero,unplaced,gaps,ledger,decisions,kinds){
+function toMd(thin,zero,unplaced,gaps,ledger,decisions,kinds,people,verdicts){
   const L=[];
   L.push('# A 線分析報告','',`產生時間：${new Date().toLocaleString('zh-TW')}`,'');
   L.push('## 總覽','',
@@ -247,6 +286,8 @@ function toMd(thin,zero,unplaced,gaps,ledger,decisions,kinds){
     `- 完全未掛素材：${zero.length}`,
     `- 未掛上的素材：${unplaced.length}`,
     `- 公案總帳：${ledger.length}`,
+    `- 人物事例：${people.length}`,
+    `- 其中待主編確認：${people.filter(x=>x.verdict==='待主編確認').length}`,
     `- 待裁示：${decisions.length}`,'');
   L.push('## 素材不足的節','');
   if(thin.length){
@@ -267,6 +308,14 @@ function toMd(thin,zero,unplaced,gaps,ledger,decisions,kinds){
   });
   L.push('','## 各冊自述缺口','');
   gaps.forEach(v=>L.push(`### 第${CN[v.n-1]}冊　${v.stage}`,'',v.gaps,''));
+  L.push('','## 人物事例','');
+  L.push('| 判定 | 則數 |','|---|---|');
+  Object.entries(verdicts).sort((a,b)=>b[1]-a[1]).forEach(([k,n])=>L.push(`| ${k} | ${n} |`));
+  const pend=people.filter(x=>x.verdict==='待主編確認');
+  if(pend.length){
+    L.push('','### 待主編確認','','| 冊 | 類別 | 事例 | 出處 |','|---|---|---|---|');
+    pend.forEach(x=>L.push(`| ${x.vol} | ${x.cat} | ${x.title} | ${x.src||''} |`));
+  }
   L.push('','## 待裁示分類','','| 類別 | 項數 |','|---|---|');
   Object.entries(kinds).sort((a,b)=>b[1]-a[1]).forEach(([k,n])=>L.push(`| ${k} | ${n} |`));
   return L.join('\n');

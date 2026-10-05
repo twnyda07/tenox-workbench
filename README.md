@@ -17,4 +17,4 @@
 - `設定指南.md` —— 後端上線設定，四步，含驗收
 - `token.html` —— 從密碼算出後端 token（純前端運算，不連網）
 - `apps-script/Code.gs` —— 後端存取控制，貼進 Apps Script
-- `分析報告.html` —— A 線：攤平 388 節骨架，產對照表與素材缺口（純前端，可匯出 CSV／Markdown）
+- `分析報告.html` —— A 線：攤平 388 節骨架，產對照表、素材缺口、公案總帳與人物事例（純前端，可匯出 CSV／Markdown）
