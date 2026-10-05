@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>十牛圖修行指南　編輯協作台</title>
+<style>
+:root{
+  --paper:#f7f4ed; --ink:#2b2724; --ink2:#5e564e; --line:#ddd5c8;
+  --accent:#7a2e2e; --gold:#9a7b3f; --ok:#3f6b4a; --warn:#8a6a1f;
+  --card:#fffdf8;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font-family:"Noto Serif TC","Songti TC","PingFang TC",serif;line-height:1.75;font-size:16px}
+a{color:var(--accent)}
+.wrap{max-width:1180px;margin:0 auto;padding:0 18px}
+header{border-bottom:1px solid var(--line);background:var(--card);position:sticky;top:0;z-index:50}
+header .wrap{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding-top:10px;padding-bottom:10px}
+h1{font-size:19px;margin:0;letter-spacing:.04em}
+.sub{color:var(--ink2);font-size:13px}
+nav{display:flex;gap:4px;flex-wrap:wrap;margin-left:auto}
+nav button{font:inherit;font-size:14px;padding:6px 13px;border:1px solid var(--line);
+  background:transparent;color:var(--ink2);border-radius:3px;cursor:pointer}
+nav button.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+#who{font-size:13px;padding:5px 9px;border:1px solid var(--line);border-radius:3px;
+  background:var(--paper);color:var(--ink);font-family:inherit;width:120px}
+#sync{font-size:12px;color:var(--ink2)}
+main{padding:22px 0 80px}
+.gate{max-width:420px;margin:16vh auto;text-align:center}
+.gate input{font:inherit;font-size:16px;padding:9px 12px;border:1px solid var(--line);
+  border-radius:3px;width:220px;background:var(--card);color:var(--ink)}
+.gate button{font:inherit;font-size:16px;padding:9px 20px;margin-left:8px;border:0;
+  background:var(--ink);color:var(--paper);border-radius:3px;cursor:pointer}
+.err{color:var(--accent);font-size:14px;min-height:20px}
+.cols{display:grid;grid-template-columns:230px 1fr;gap:26px;align-items:start}
+@media(max-width:860px){.cols{grid-template-columns:1fr}}
+.side{position:sticky;top:64px;max-height:calc(100vh - 90px);overflow:auto;
+  border-right:1px solid var(--line);padding-right:14px;font-size:14px}
+.side a{display:block;padding:3px 0;color:var(--ink2);text-decoration:none}
+.side a:hover,.side a.on{color:var(--accent)}
+.side .grp{font-weight:700;color:var(--ink);margin-top:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:4px;
+  padding:16px 18px;margin:0 0 14px}
+.sec{border-left:3px solid var(--line);padding-left:14px;margin:18px 0}
+.sec.thin{border-left-color:var(--warn)}
+.sec h4{margin:0 0 6px;font-size:16px}
+.badge{display:inline-block;font-size:11px;padding:1px 7px;border-radius:9px;
+  border:1px solid var(--line);color:var(--ink2);margin-left:6px;vertical-align:2px}
+.badge.w{border-color:var(--warn);color:var(--warn)}
+.badge.f{border-color:var(--accent);color:var(--accent)}
+.mat{margin:7px 0;padding-left:12px;border-left:1px dotted var(--line)}
+.mat b{font-weight:700}
+.mat .use{color:var(--ink2);font-size:14.5px}
+.mat .src{color:var(--gold);font-size:12.5px}
+h2{font-size:21px;border-bottom:1px solid var(--line);padding-bottom:6px;margin:26px 0 14px}
+h3{font-size:17px;margin:20px 0 8px;color:var(--ink)}
+.verse{white-space:pre-wrap;background:var(--paper);border:1px solid var(--line);
+  padding:10px 14px;border-radius:3px;font-size:14.5px;color:var(--ink2)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{border:1px solid var(--line);padding:6px 9px;text-align:left;vertical-align:top}
+th{background:var(--paper)}
+.d{border:1px solid var(--line);border-radius:4px;background:var(--card);
+  padding:14px 16px;margin:0 0 12px}
+.d.done{border-left:4px solid var(--ok)}
+.d.open{border-left:4px solid var(--accent)}
+.d h4{margin:0 0 4px;font-size:16px}
+.d .ctx{color:var(--ink2);font-size:14px;margin-bottom:9px}
+.opts{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:8px}
+.opts button{font:inherit;font-size:14px;padding:5px 12px;border:1px solid var(--line);
+  background:var(--paper);color:var(--ink);border-radius:3px;cursor:pointer}
+.opts button.pick{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.opts button.rec::after{content:"　建議";font-size:11px;opacity:.7}
+.d textarea{width:100%;font:inherit;font-size:14px;padding:7px 9px;border:1px solid var(--line);
+  border-radius:3px;background:var(--paper);color:var(--ink);resize:vertical;min-height:38px}
+.meta{font-size:12px;color:var(--gold);margin-top:6px}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center}
+.filters select,.filters input{font:inherit;font-size:14px;padding:5px 9px;
+  border:1px solid var(--line);border-radius:3px;background:var(--card);color:var(--ink)}
+.stat{display:inline-block;margin-right:16px;font-size:14px;color:var(--ink2)}
+.stat b{color:var(--ink);font-size:17px}
+.hide{display:none}
+footer{border-top:1px solid var(--line);color:var(--ink2);font-size:13px;padding:14px 0;text-align:center}
+</style>
+</head>
+<body>
+<div id="gate" class="gate">
+  <h1 style="font-size:22px">十牛圖修行指南　編輯協作台</h1>
+  <p class="sub">內容為 AES 加密，請輸入密碼</p>
+  <p><input id="pw" type="password" autocomplete="current-password" placeholder="密碼">
+     <button id="go">進入</button></p>
+  <p class="err" id="err"></p>
+</div>
+
+<div id="app" class="hide">
+<header><div class="wrap">
+  <div><h1>十牛圖修行指南　編輯協作台</h1>
+       <div class="sub" id="hsub"></div></div>
+  <nav>
+    <button data-v="todo" class="on">待裁示</button>
+    <button data-v="book">十冊撰稿本</button>
+    <button data-v="koan">公案總帳</button>
+    <button data-v="ppl">人物事例</button>
+  </nav>
+  <input id="who" placeholder="你的名字">
+  <span id="sync">—</span>
+</div></header>
+<main><div class="wrap" id="view"></div></main>
+<footer>見輝法師禪七開示 85 篇・139 萬字　|　內容僅供編輯團隊內部使用，請勿外傳</footer>
+</div>
+
+<script src="config.js"></script>
+<script src="payload.enc.js"></script>
+<script>
+const CN='一二三四五六七八九十'.split('');
+let P=null, WHO='', STATE={}, API='';
+const $=s=>document.querySelector(s), el=(t,c,h)=>{const e=document.createElement(t);
+  if(c)e.className=c; if(h!=null)e.innerHTML=h; return e;};
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* ── 解密 ── */
+const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+async function unlock(pw){
+  const E=window.__ENC__;
+  const base=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveKey']);
+  const key=await crypto.subtle.deriveKey({name:'PBKDF2',salt:b64(E.s),iterations:E.it,hash:'SHA-256'},
+    base,{name:'AES-GCM',length:256},false,['decrypt']);
+  const plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64(E.i)},key,b64(E.c));
+  const ds=new DecompressionStream('gzip');
+  const txt=await new Response(new Blob([plain]).stream().pipeThrough(ds)).text();
+  return JSON.parse(txt);
+}
+$('#go').onclick=async()=>{
+  $('#err').textContent='解密中⋯';
+  try{ P=await unlock($('#pw').value.trim()); start(); }
+  catch(e){ $('#err').textContent='密碼不對'; }
+};
+$('#pw').addEventListener('keydown',e=>{if(e.key==='Enter')$('#go').click();});
+
+/* ── 後端 ── */
+async function pull(){
+  if(!API) return;
+  try{ const r=await fetch(API+'?action=list',{redirect:'follow'});
+       const j=await r.json();
+       if(j.ok){ STATE=j.data||{}; save(); note('已同步'); render(); } }
+  catch(e){ note('離線（決定先存本機）'); }
+}
+async function push(id,rec){
+  STATE[id]=rec; save(); render();
+  if(!API){ note('本機已存（後端未設定）'); return; }
+  note('儲存中⋯');
+  try{ await fetch(API,{method:'POST',redirect:'follow',
+        headers:{'Content-Type':'text/plain;charset=utf-8'},
+        body:JSON.stringify({action:'set',id:id,...rec})});
+       note('已同步 '+new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'})); }
+  catch(e){ note('同步失敗，已存本機'); }
+}
+const save=()=>localStorage.setItem('tenox_state',JSON.stringify(STATE));
+const note=t=>$('#sync').textContent=t;
+
+/* ── 啟動 ── */
+function start(){
+  $('#gate').classList.add('hide'); $('#app').classList.remove('hide');
+  API=(window.__API__||''); STATE=JSON.parse(localStorage.getItem('tenox_state')||'{}');
+  WHO=localStorage.getItem('tenox_who')||'';
+  $('#who').value=WHO;
+  $('#who').oninput=e=>{WHO=e.target.value.trim();localStorage.setItem('tenox_who',WHO);};
+  const nsec=P.vols.reduce((n,v)=>n+v.chapters.reduce((m,c)=>m+c.sections.length,0),0);
+  const nmat=P.vols.reduce((n,v)=>n+v.chapters.reduce((m,c)=>m+c.sections.reduce((k,s)=>k+s.m.length,0),0),0);
+  $('#hsub').textContent=`十冊 ${nsec} 節・${nmat} 則素材・公案總帳 ${P.ledger.rows.length} 則・待裁示 ${P.decisions.length} 項`;
+  document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
+    document.querySelectorAll('nav button').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on'); VIEW=b.dataset.v; render(); window.scrollTo(0,0);});
+  pull(); render();
+}
+let VIEW='todo', F={kind:'',vol:'',st:'',q:''};
+
+function render(){ const v=$('#view'); v.innerHTML='';
+  ({todo:vTodo,book:vBook,koan:vKoan,ppl:vPpl})[VIEW](v); }
+
+/* ── 待裁示 ── */
+function vTodo(root){
+  const ds=P.decisions, done=ds.filter(d=>STATE[d.id]).length;
+  root.appendChild(el('div','card',
+    `<span class="stat"><b>${done}</b> / ${ds.length} 已決定</span>`+
+    `<span class="stat">未決 <b>${ds.length-done}</b></span>`+
+    `<span class="sub">決定會即時同步給其他人。先在右上角填你的名字。</span>`));
+  const kinds=[...new Set(ds.map(d=>d.kind))];
+  const bar=el('div','filters');
+  bar.innerHTML=`<select id="fk"><option value="">全部類別</option>${kinds.map(k=>
+      `<option ${F.kind===k?'selected':''}>${k}（${ds.filter(d=>d.kind===k).length}）</option>`).join('')}</select>
+    <select id="fs"><option value="">全部狀態</option>
+      <option value="open" ${F.st==='open'?'selected':''}>只看未決</option>
+      <option value="done" ${F.st==='done'?'selected':''}>只看已決</option></select>
+    <input id="fq" placeholder="搜尋" value="${esc(F.q)}" size="18">`;
+  root.appendChild(bar);
+  bar.querySelector('#fk').onchange=e=>{F.kind=e.target.value.split('（')[0];render();};
+  bar.querySelector('#fs').onchange=e=>{F.st=e.target.value;render();};
+  bar.querySelector('#fq').oninput=e=>{F.q=e.target.value;clearTimeout(window._t);
+    window._t=setTimeout(render,250);};
+  let list=ds;
+  if(F.kind) list=list.filter(d=>d.kind===F.kind);
+  if(F.st==='open') list=list.filter(d=>!STATE[d.id]);
+  if(F.st==='done') list=list.filter(d=>STATE[d.id]);
+  if(F.q){const q=F.q.trim();list=list.filter(d=>(d.title+d.ctx).includes(q));}
+  if(!list.length){root.appendChild(el('p','sub','（沒有符合的項目）'));return;}
+  list.slice(0,300).forEach(d=>{
+    const cur=(STATE[d.id]&&STATE[d.id].v)?STATE[d.id]:null;
+    const c=el('div','d '+(cur?'done':'open'));
+    c.innerHTML=`<h4>${esc(d.title)}<span class="badge">${esc(d.kind)}</span>`+
+      (d.vol?`<span class="badge">第${CN[d.vol-1]}冊</span>`:'')+`</h4>`+
+      `<div class="ctx">${esc(d.ctx)}</div>`;
+    const o=el('div','opts');
+    (d.opts||[]).forEach(t=>{
+      const b=el('button',(cur&&cur.v===t?'pick ':'')+(d.rec===t?'rec':''),esc(t));
+      b.onclick=()=>push(d.id,{v:t,note:(cur&&cur.note)||'',who:WHO||'未具名',at:new Date().toISOString()});
+      o.appendChild(b);
+    });
+    if(cur){const ub=el('button',null,'取消決定');ub.style.opacity='.6';
+      ub.onclick=()=>{delete STATE[d.id];save();render();
+        if(API)fetch(API,{method:'POST',redirect:'follow',
+          headers:{'Content-Type':'text/plain;charset=utf-8'},
+          body:JSON.stringify({action:'del',id:d.id})}).then(()=>note('已取消'));};
+      o.appendChild(ub);}
+    c.appendChild(o);
+    const ta=el('textarea'); ta.placeholder='註記（選填）'; ta.value=(cur&&cur.note)||'';
+    ta.onchange=()=>push(d.id,{v:(cur&&cur.v)||'',note:ta.value,who:WHO||'未具名',at:new Date().toISOString()});
+    c.appendChild(ta);
+    if(cur) c.appendChild(el('div','meta',
+      `${esc(cur.who||'')}　${new Date(cur.at).toLocaleString('zh-TW')}`));
+    root.appendChild(c);
+  });
+  if(list.length>300) root.appendChild(el('p','sub',`（只顯示前 300 項，共 ${list.length} 項，請用篩選縮小範圍）`));
+}
+
+/* ── 十冊撰稿本 ── */
+function vBook(root){
+  const g=el('div','cols'), side=el('div','side'), body=el('div');
+  P.vols.forEach(v=>{
+    side.appendChild(el('div','grp',`第${CN[v.n-1]}冊　${esc(v.stage)}`));
+    v.chapters.forEach(c=>{const a=el('a',null,`　${c.num}. ${esc(c.title)}`);
+      a.href='#v'+v.n+'c'+c.num; side.appendChild(a);});
+  });
+  P.vols.forEach(v=>{
+    const nm=v.chapters.reduce((k,c)=>k+c.sections.reduce((j,s)=>j+s.m.length,0),0);
+    const nth=v.chapters.reduce((k,c)=>k+c.sections.filter(s=>s.thin).length,0);
+    body.appendChild(el('h2',null,`第${CN[v.n-1]}冊　${esc(v.stage)}`));
+    body.appendChild(el('div','card',
+      `<div>${esc(v.thesis||'')}</div><p class="sub">`+
+      `${v.chapters.length} 章・${v.chapters.reduce((k,c)=>k+c.sections.length,0)} 節・`+
+      `${nm} 則素材${nth?`・<b style="color:var(--warn)">${nth} 節素材不足</b>`:''}`+
+      (v.unplaced&&v.unplaced.length?`・${v.unplaced.length} 則未掛`:'')+`</p>`+
+      `<details><summary class="sub">本冊核心法門（${v.methods.length}）</summary>`+
+      v.methods.map(m=>`<p><b>${esc(m.n)}</b><span class="badge">${esc(m.r)}</span><br>
+        <span class="use">${esc(m.s||'')}</span></p>`).join('')+`</details>`));
+    v.chapters.forEach(c=>{
+      const h=el('h3',null,`<a id="v${v.n}c${c.num}"></a>第 ${c.num} 章　${esc(c.title)}`);
+      body.appendChild(h);
+      c.sections.forEach(s=>{
+        const d=el('div','sec'+(s.thin?' thin':''));
+        d.innerHTML=`<h4>${esc(s.t)}<span class="badge">${s.m.length} 則</span>`+
+          (s.thin?'<span class="badge w">素材不足</span>':'')+`</h4>`+
+          (s.m.length?s.m.map(m=>`<div class="mat"><b>${esc(m.n)}</b>`+
+            `<span class="badge">${esc(m.k)}・${esc(m.d)}</span><br>`+
+            `<span class="use">${esc(m.u||'')}</span><br>`+
+            `<span class="src">出處：${esc(m.s||'')}</span></div>`).join('')
+            :'<p class="sub">（以法師的義理段落為主，無掛上素材）</p>');
+        body.appendChild(d);
+      });
+    });
+    if(v.unplaced&&v.unplaced.length){
+      body.appendChild(el('h3',null,'本冊未掛上的素材'));
+      body.appendChild(el('div','card','<table><tr><th>素材</th><th>出處</th><th>為什麼</th><th>建議移到</th></tr>'+
+        v.unplaced.map(x=>`<tr><td>${esc(x.name)}</td><td>${esc(x.src||'')}</td><td>${esc(x.why||'')}</td>`+
+        `<td>${x.suggestVol?('第'+CN[x.suggestVol-1]+'冊'):'不必移'}</td></tr>`).join('')+'</table>'));
+    }
+    if(v.gaps&&v.gaps!=='無') body.appendChild(el('div','card',`<b>本冊缺口</b><p class="use">${esc(v.gaps)}</p>`));
+  });
+  g.appendChild(side); g.appendChild(body); root.appendChild(g);
+}
+
+/* ── 公案總帳 ── */
+function vKoan(root){
+  const L=P.ledger, s=L.stats;
+  root.appendChild(el('div','card',
+    `<span class="stat">共 <b>${s.total}</b> 則</span>`+
+    `<span class="stat">兩線都有 <b>${s.bothLines}</b></span>`+
+    `<span class="stat">只有 Claude 線 <b>${s.claudeOnly}</b></span>`+
+    `<span class="stat">只有 NotebookLM 線 <b>${s.nbOnly}</b></span>`+
+    `<p class="sub">「完整敘述權」只管完整敘事放哪一冊；其餘各冊照樣可以出現，帶一句就好。跨階複現是遞進，不是錯誤。</p>`));
+  const bar=el('div','filters');
+  bar.innerHTML=`<input id="kq" placeholder="搜尋公案" size="22" value="${esc(F.q)}">`;
+  root.appendChild(bar);
+  bar.querySelector('#kq').oninput=e=>{F.q=e.target.value;clearTimeout(window._t);
+    window._t=setTimeout(render,250);};
+  let rows=L.rows;
+  if(F.q) rows=rows.filter(r=>(r.koan+(r.ladderNote||'')).includes(F.q.trim()));
+  const t=el('div','card');
+  t.innerHTML='<table><tr><th>公案</th><th>出現在</th><th>完整敘述權</th><th>來源</th><th>各階分別用它講什麼</th></tr>'+
+    rows.map(r=>{
+      const warn=r.status==='兩線不一致·需主編定';
+      return `<tr><td>${warn?'⚠️ ':''}${esc(r.koan)}</td>`+
+      `<td>${(r.appearsIn||[]).join('、')}</td>`+
+      `<td><b>${r.fullIn?('第'+CN[r.fullIn-1]+'冊'):'—'}</b>${r.chapter?'<br><span class="sub">'+esc(r.chapter)+'</span>':''}</td>`+
+      `<td class="sub">${esc((r.source||'').replace('只有 ',''))}</td>`+
+      `<td class="use">${esc(r.ladderNote&&r.ladderNote!=='無'?r.ladderNote:'')}</td></tr>`;}).join('')+'</table>';
+  root.appendChild(t);
+}
+
+/* ── 人物事例 ── */
+function vPpl(root){
+  const all=[]; P.vols.forEach(v=>(v.people||[]).forEach(x=>all.push({...x,vol:v.n,stage:v.stage})));
+  const c=k=>all.filter(x=>x.verdict===k).length;
+  root.appendChild(el('div','card',
+    `<span class="stat">共 <b>${all.length}</b> 則</span>`+
+    `<span class="stat">保留 <b>${c('保留')}</b></span>`+
+    `<span class="stat">排除 <b>${c('排除')}</b></span>`+
+    `<span class="stat">待確認 <b>${c('待主編確認')}</b></span>`+
+    `<p class="sub">判準：只排除「在家眾的現場／當代事例」；歷史人物、在家禪者公案、祖師公案、佛經人物、譬喻、出家眾與近代祖師一律保留。當代出家眾現場事例列「待主編確認」，請到〈待裁示〉逐則決定。</p>`));
+  const bar=el('div','filters');
+  bar.innerHTML=`<select id="pv"><option value="">全部冊別</option>`+
+    P.vols.map(v=>`<option value="${v.n}" ${F.vol==v.n?'selected':''}>第${CN[v.n-1]}冊 ${esc(v.stage)}</option>`).join('')+
+    `</select><select id="pj"><option value="">全部判定</option>`+
+    ['保留','排除','待主編確認'].map(k=>`<option ${F.st===k?'selected':''}>${k}</option>`).join('')+
+    `</select><input id="pq" placeholder="搜尋" size="18" value="${esc(F.q)}">`;
+  root.appendChild(bar);
+  bar.querySelector('#pv').onchange=e=>{F.vol=e.target.value;render();};
+  bar.querySelector('#pj').onchange=e=>{F.st=e.target.value;render();};
+  bar.querySelector('#pq').oninput=e=>{F.q=e.target.value;clearTimeout(window._t);
+    window._t=setTimeout(render,250);};
+  let list=all;
+  if(F.vol) list=list.filter(x=>x.vol==F.vol);
+  if(F.st) list=list.filter(x=>x.verdict===F.st);
+  if(F.q) list=list.filter(x=>(x.title+(x.src||'')).includes(F.q.trim()));
+  const t=el('div','card');
+  t.innerHTML=`<p class="sub">${list.length} 則</p><table>`+
+    '<tr><th>冊</th><th>判定</th><th>類別</th><th>事例</th><th>出處</th><th>排除後改用什麼承擔</th></tr>'+
+    list.map(x=>`<tr><td>${CN[x.vol-1]}</td><td>${esc(x.verdict)}</td><td class="sub">${esc(x.cat)}</td>`+
+      `<td>${esc(x.title)}</td><td class="sub">${esc(x.src||'')}</td>`+
+      `<td class="use">${esc(x.replacement==='不需替代'?'':(x.replacement||''))}</td></tr>`).join('')+'</table>';
+  root.appendChild(t);
+}
+</script>
+</body>
+</html>
