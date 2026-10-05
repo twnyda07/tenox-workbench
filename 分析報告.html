@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="zh-Hant">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A 線分析報告</title>
+<style>
+  :root{--bg:#faf8f5;--fg:#2b2724;--mut:#6f675f;--line:#e2dcd3;--acc:#7a5c3e;
+        --warn:#b06a00;--warnbg:rgba(176,106,0,.09);--card:rgba(127,127,127,.05)}
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+    --bg:#1a1714;--fg:#ece6de;--mut:#a39a8f;--line:#352f29;--acc:#c9a227;
+    --warn:#e0a33c;--warnbg:rgba(224,163,60,.11);--card:rgba(255,255,255,.04)}}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+    font:15px/1.7 system-ui,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif}
+  .wrap{max-width:1100px;margin:0 auto;padding:40px 16px 80px}
+  h1{font-size:22px;margin:0 0 4px}
+  h2{font-size:18px;margin:44px 0 12px;padding-bottom:7px;border-bottom:2px solid var(--line)}
+  h3{font-size:15.5px;margin:26px 0 8px;color:var(--acc)}
+  .sub{color:var(--mut);font-size:13.5px}
+  input,button,select{font:inherit}
+  input[type=password],input[type=search]{padding:10px 12px;border:1px solid var(--line);
+    border-radius:8px;background:var(--bg);color:var(--fg);min-width:200px}
+  button{padding:9px 18px;border:0;border-radius:8px;background:var(--acc);
+    color:#fff;cursor:pointer;margin-right:8px}
+  button.ghost{background:transparent;color:var(--acc);border:1px solid var(--acc)}
+  button:disabled{opacity:.5;cursor:default}
+  table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0}
+  th,td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}
+  th{background:var(--card);font-weight:600;position:sticky;top:0}
+  tr.thin td{background:var(--warnbg)}
+  .pill{display:inline-block;padding:1px 8px;border:1px solid var(--line);
+    border-radius:999px;font-size:11.5px;color:var(--mut);margin-right:4px}
+  .pill.w{color:var(--warn);border-color:var(--warn)}
+  .cards{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0}
+  .kpi{flex:1 1 150px;padding:14px;border:1px solid var(--line);border-radius:10px;
+    background:var(--card)}
+  .kpi b{display:block;font-size:26px;line-height:1.2}
+  .kpi.w b{color:var(--warn)}
+  .err{color:#b3261e;min-height:22px}
+  .hide{display:none}
+  .tools{margin:18px 0;padding:14px;border:1px solid var(--line);border-radius:10px;
+    background:var(--card)}
+  details{margin:8px 0}
+  summary{cursor:pointer;color:var(--acc)}
+  .scroll{max-height:70vh;overflow:auto;border:1px solid var(--line);border-radius:8px}
+  .scroll table{margin:0;border:0}
+  @media(max-width:640px){.wrap{padding:24px 12px 60px}table{font-size:12.5px}}
+</style>
+<div class="wrap">
+
+<div id="gate">
+  <h1>A 線分析報告</h1>
+  <p class="sub">把 388 節骨架攤平，列出每一節掛了哪些素材、哪幾節素材不足，
+     並整理公案總帳與待裁示。</p>
+  <p style="margin-top:22px">
+    <input id="pw" type="password" autocomplete="current-password" placeholder="協作台密碼">
+    <button id="go">解密並分析</button>
+  </p>
+  <p class="err" id="err"></p>
+  <p class="sub" style="margin-top:26px;padding-top:18px;border-top:1px solid var(--line)">
+    這一頁只在你的瀏覽器裡運算，密碼與內容都不會送到任何伺服器。<br>
+    需要與 <code>payload.enc.js</code> 放在同一個資料夾才能讀到資料。
+  </p>
+</div>
+
+<div id="app" class="hide"></div>
+</div>
+
+<script src="payload.enc.js"></script>
+<script>
+const CN='一二三四五六七八九十'.split('');
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const b64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+let P=null, FLAT=[];
+
+/* 與 index.html 的 unlock() 完全一致 */
+async function unlock(pw){
+  const E=window.__ENC__;
+  const base=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),
+    'PBKDF2',false,['deriveKey']);
+  const key=await crypto.subtle.deriveKey(
+    {name:'PBKDF2',salt:b64(E.s),iterations:E.it,hash:'SHA-256'},
+    base,{name:'AES-GCM',length:256},false,['decrypt']);
+  const plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:b64(E.i)},key,b64(E.c));
+  const ds=new DecompressionStream('gzip');
+  return JSON.parse(await new Response(new Blob([plain]).stream().pipeThrough(ds)).text());
+}
+
+/* ── 攤平：冊 → 章 → 節 ── */
+function flatten(){
+  const out=[];
+  P.vols.forEach(v=>v.chapters.forEach(c=>c.sections.forEach((s,i)=>{
+    out.push({
+      volN:v.n, vol:`第${CN[v.n-1]}冊`, stage:v.stage||'',
+      chNum:c.num, chTitle:c.title||'',
+      secIdx:i+1, sec:s.t||'',
+      nMat:(s.m||[]).length, thin:!!s.thin, mats:s.m||[]
+    });
+  })));
+  return out;
+}
+
+/* 未知結構的表格：欄位由資料本身推導，不預設欄位名 */
+function autoTable(rows,limit){
+  if(!rows||!rows.length) return '<p class="sub">（無資料）</p>';
+  const keys=[...new Set(rows.flatMap(r=>
+    (r&&typeof r==='object')?Object.keys(r):[]))];
+  if(!keys.length) return '<p class="sub">（資料非物件結構）</p>';
+  const show=rows.slice(0,limit||rows.length);
+  const cell=x=>{
+    if(x==null) return '';
+    if(Array.isArray(x)) return esc(x.map(y=>
+      (y&&typeof y==='object')?(y.n||y.name||y.t||JSON.stringify(y)):y).join('、'));
+    if(typeof x==='object') return esc(JSON.stringify(x));
+    return esc(x);
+  };
+  return '<div class="scroll"><table><tr>'+keys.map(k=>`<th>${esc(k)}</th>`).join('')+'</tr>'+
+    show.map(r=>'<tr>'+keys.map(k=>`<td>${cell(r[k])}</td>`).join('')+'</tr>').join('')+
+    '</table></div>'+
+    (rows.length>show.length?`<p class="sub">（顯示前 ${show.length} 筆，共 ${rows.length} 筆；完整內容請用下方匯出）</p>`:'');
+}
+
+function kpi(label,val,warn){
+  return `<div class="kpi${warn?' w':''}"><b>${val}</b><span class="sub">${esc(label)}</span></div>`;
+}
+
+function build(){
+  FLAT=flatten();
+  const nSec=FLAT.length;
+  const nMat=FLAT.reduce((n,r)=>n+r.nMat,0);
+  const thin=FLAT.filter(r=>r.thin);
+  const zero=FLAT.filter(r=>r.nMat===0);
+  const unplaced=P.vols.flatMap(v=>(v.unplaced||[]).map(x=>({冊:`第${CN[v.n-1]}冊`,...x})));
+  const ledger=(P.ledger&&P.ledger.rows)||[];
+  const decisions=P.decisions||[];
+  const a=$('#app'); a.classList.remove('hide'); $('#gate').classList.add('hide');
+
+  let h=`<h1>A 線分析報告</h1><p class="sub">產生時間　${new Date().toLocaleString('zh-TW')}</p>`;
+
+  h+=`<div class="cards">
+    ${kpi('節（攤平後）',nSec)}
+    ${kpi('素材總則數',nMat)}
+    ${kpi('素材不足（thin）',thin.length,thin.length>0)}
+    ${kpi('完全未掛素材',zero.length,zero.length>0)}
+    ${kpi('公案總帳',ledger.length)}
+    ${kpi('待裁示',decisions.length)}
+  </div>`;
+
+  h+=`<div class="tools">
+    <button id="dlCsv">下載對照表 CSV</button>
+    <button id="dlMd" class="ghost">下載完整報告 Markdown</button>
+    <button id="dlJson" class="ghost">下載攤平 JSON</button>
+    <span class="sub">　CSV 可直接丟進 Excel 或 Google 試算表分工</span>
+  </div>`;
+
+  /* 素材不足 */
+  h+=`<h2>素材不足的節　<span class="pill w">${thin.length} 節</span></h2>`;
+  h+=thin.length?
+    '<table><tr><th>冊</th><th>章</th><th>節</th><th>素材數</th></tr>'+
+    thin.map(r=>`<tr class="thin"><td>${r.vol} ${esc(r.stage)}</td>`+
+      `<td>${r.chNum}. ${esc(r.chTitle)}</td><td>${esc(r.sec)}</td>`+
+      `<td>${r.nMat}</td></tr>`).join('')+'</table>'
+    :'<p class="sub">（payload 未標記任何 thin 節）</p>';
+  if(zero.length && zero.length!==thin.length){
+    h+=`<h3>另有 ${zero.length} 節素材數為 0</h3>`;
+    h+='<p class="sub">以法師義理段落為主、刻意不掛素材者亦計入，需人工判讀是否為缺口。</p>';
+    h+='<table><tr><th>冊</th><th>章</th><th>節</th><th>已標 thin</th></tr>'+
+      zero.map(r=>`<tr><td>${r.vol}</td><td>${r.chNum}. ${esc(r.chTitle)}</td>`+
+        `<td>${esc(r.sec)}</td><td>${r.thin?'是':'否'}</td></tr>`).join('')+'</table>';
+  }
+
+  /* 對照表 */
+  h+=`<h2>每一節要用哪一段素材　<span class="pill">${nSec} 節</span></h2>`;
+  h+='<p class="sub">依冊、章、節順序攤平。素材欄為「名稱〔類別・出處〕用法」。</p>';
+  h+='<div class="scroll"><table><tr><th style="width:90px">冊</th><th style="width:150px">章</th>'+
+     '<th style="width:170px">節</th><th style="width:52px">則</th><th>素材</th></tr>'+
+    FLAT.map(r=>`<tr${r.thin?' class="thin"':''}>`+
+      `<td>${r.vol}<br><span class="sub">${esc(r.stage)}</span></td>`+
+      `<td>${r.chNum}. ${esc(r.chTitle)}</td>`+
+      `<td>${esc(r.sec)}${r.thin?' <span class="pill w">不足</span>':''}</td>`+
+      `<td>${r.nMat}</td>`+
+      `<td>${r.nMat?r.mats.map(m=>`<div><b>${esc(m.n)}</b> `+
+        `<span class="pill">${esc(m.k)}・${esc(m.d)}</span><br>`+
+        `<span class="sub">${esc(m.u||'')}</span>`+
+        (m.s?`<br><span class="sub">出處：${esc(m.s)}</span>`:'')+`</div>`).join('')
+        :'<span class="sub">（無）</span>'}</td></tr>`).join('')+'</table></div>';
+
+  /* 未掛素材 */
+  h+=`<h2>未掛上的素材　<span class="pill">${unplaced.length} 則</span></h2>`;
+  h+=autoTable(unplaced);
+
+  /* 各冊缺口 */
+  const gaps=P.vols.filter(v=>v.gaps&&v.gaps!=='無');
+  h+=`<h2>各冊自述缺口　<span class="pill">${gaps.length} 冊</span></h2>`;
+  h+=gaps.length?gaps.map(v=>
+    `<h3>第${CN[v.n-1]}冊　${esc(v.stage)}</h3><p>${esc(v.gaps)}</p>`).join('')
+    :'<p class="sub">（無）</p>';
+
+  /* 公案總帳 */
+  h+=`<h2>公案總帳　<span class="pill">${ledger.length} 則</span></h2>`;
+  if(P.ledger&&P.ledger.stats)
+    h+='<details open><summary>統計</summary>'+autoTable([P.ledger.stats])+'</details>';
+  h+=autoTable(ledger,200);
+
+  /* 待裁示 */
+  const kinds={};
+  decisions.forEach(d=>{kinds[d.kind||'（未分類）']=(kinds[d.kind||'（未分類）']||0)+1;});
+  h+=`<h2>待裁示　<span class="pill">${decisions.length} 項</span></h2>`;
+  h+='<table><tr><th>類別</th><th>項數</th></tr>'+
+    Object.entries(kinds).sort((a,b)=>b[1]-a[1])
+      .map(([k,n])=>`<tr><td>${esc(k)}</td><td>${n}</td></tr>`).join('')+'</table>';
+  h+='<p class="sub">各項目前的裁示狀態存在後端，請到協作台查看；此處列出題目與建議值。</p>';
+  h+=autoTable(decisions,200);
+
+  a.innerHTML=h;
+  $('#dlCsv').onclick=()=>dl('對照表.csv',toCsv(),'text/csv');
+  $('#dlMd').onclick=()=>dl('A線分析報告.md',toMd(thin,zero,unplaced,gaps,ledger,decisions,kinds),'text/markdown');
+  $('#dlJson').onclick=()=>dl('攤平骨架.json',JSON.stringify(FLAT,null,2),'application/json');
+}
+
+function toCsv(){
+  const q=s=>'"'+String(s==null?'':s).replace(/"/g,'""')+'"';
+  const head=['冊','階位','章次','章名','節次','節名','素材數','素材不足',
+              '素材名稱','素材類別','素材出處欄','用法','出處'];
+  const rows=[head.map(q).join(',')];
+  FLAT.forEach(r=>{
+    if(!r.nMat){
+      rows.push([r.vol,r.stage,r.chNum,r.chTitle,r.secIdx,r.sec,0,r.thin?'是':'',
+                 '','','','',''].map(q).join(','));
+    } else r.mats.forEach(m=>{
+      rows.push([r.vol,r.stage,r.chNum,r.chTitle,r.secIdx,r.sec,r.nMat,r.thin?'是':'',
+                 m.n,m.k,m.d,m.u,m.s].map(q).join(','));
+    });
+  });
+  return '﻿'+rows.join('\r\n');   // BOM：讓 Excel 正確辨識 UTF-8
+}
+
+function toMd(thin,zero,unplaced,gaps,ledger,decisions,kinds){
+  const L=[];
+  L.push('# A 線分析報告','',`產生時間：${new Date().toLocaleString('zh-TW')}`,'');
+  L.push('## 總覽','',
+    `- 節（攤平後）：${FLAT.length}`,
+    `- 素材總則數：${FLAT.reduce((n,r)=>n+r.nMat,0)}`,
+    `- 素材不足（thin）：${thin.length}`,
+    `- 完全未掛素材：${zero.length}`,
+    `- 未掛上的素材：${unplaced.length}`,
+    `- 公案總帳：${ledger.length}`,
+    `- 待裁示：${decisions.length}`,'');
+  L.push('## 素材不足的節','');
+  if(thin.length){
+    L.push('| 冊 | 章 | 節 | 素材數 |','|---|---|---|---|');
+    thin.forEach(r=>L.push(`| ${r.vol} ${r.stage} | ${r.chNum}. ${r.chTitle} | ${r.sec} | ${r.nMat} |`));
+  } else L.push('（payload 未標記任何 thin 節）');
+  L.push('');
+  L.push('## 每一節要用哪一段素材','');
+  let curV='',curC='';
+  FLAT.forEach(r=>{
+    if(r.vol!==curV){ curV=r.vol; curC=''; L.push('',`### ${r.vol}　${r.stage}`,''); }
+    if(r.chTitle!==curC){ curC=r.chTitle; L.push('',`#### 第 ${r.chNum} 章　${r.chTitle}`,''); }
+    L.push(`**${r.sec}**　${r.nMat} 則${r.thin?'　⚠ 素材不足':''}`);
+    if(r.nMat) r.mats.forEach(m=>
+      L.push(`- **${m.n}**（${m.k}・${m.d}）${m.u||''}${m.s?`　出處：${m.s}`:''}`));
+    else L.push('- （無掛上素材）');
+    L.push('');
+  });
+  L.push('','## 各冊自述缺口','');
+  gaps.forEach(v=>L.push(`### 第${CN[v.n-1]}冊　${v.stage}`,'',v.gaps,''));
+  L.push('','## 待裁示分類','','| 類別 | 項數 |','|---|---|');
+  Object.entries(kinds).sort((a,b)=>b[1]-a[1]).forEach(([k,n])=>L.push(`| ${k} | ${n} |`));
+  return L.join('\n');
+}
+
+function dl(name,text,mime){
+  const b=new Blob([text],{type:mime+';charset=utf-8'});
+  const u=URL.createObjectURL(b), a=document.createElement('a');
+  a.href=u; a.download=name; a.click();
+  setTimeout(()=>URL.revokeObjectURL(u),1000);
+}
+
+$('#go').onclick=async()=>{
+  const pw=$('#pw').value.trim();
+  if(!pw){ $('#err').textContent='請先輸入密碼'; return; }
+  if(!window.__ENC__){ $('#err').textContent='找不到 payload.enc.js —— 請把這個檔案放到與它同一個資料夾'; return; }
+  $('#err').textContent='解密中⋯'; $('#go').disabled=true;
+  try{ P=await unlock(pw); build(); }
+  catch(e){ $('#err').textContent='密碼不對，或資料格式不符：'+e.message; $('#go').disabled=false; }
+};
+$('#pw').addEventListener('keydown',e=>{if(e.key==='Enter')$('#go').click();});
+</script>
+</html>
