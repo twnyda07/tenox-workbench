@@ -114,7 +114,7 @@ footer{border-top:1px solid var(--line);color:var(--ink2);font-size:13px;padding
 <script src="payload.enc.js"></script>
 <script>
 const CN='一二三四五六七八九十'.split('');
-let P=null, WHO='', STATE={}, API='';
+let P=null, WHO='', STATE={}, API='', TOKEN='';
 const $=s=>document.querySelector(s), el=(t,c,h)=>{const e=document.createElement(t);
   if(c)e.className=c; if(h!=null)e.innerHTML=h; return e;};
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -131,9 +131,19 @@ async function unlock(pw){
   const txt=await new Response(new Blob([plain]).stream().pipeThrough(ds)).text();
   return JSON.parse(txt);
 }
+/* 後端 token：與內容解密同一個密碼，但 salt 與迭代數都不同，
+   兩把鑰匙互不回推 —— 取得 token 不足以解開 payload。 */
+async function deriveToken(pw){
+  const enc=new TextEncoder();
+  const km=await crypto.subtle.importKey('raw',enc.encode(pw),'PBKDF2',false,['deriveBits']);
+  const bits=await crypto.subtle.deriveBits(
+    {name:'PBKDF2',salt:enc.encode('tenox-backend-v1'),iterations:600000,hash:'SHA-256'},km,256);
+  return btoa(String.fromCharCode(...new Uint8Array(bits)));
+}
 $('#go').onclick=async()=>{
   $('#err').textContent='解密中⋯';
-  try{ P=await unlock($('#pw').value.trim()); start(); }
+  const pw=$('#pw').value.trim();
+  try{ P=await unlock(pw); TOKEN=await deriveToken(pw); start(); }
   catch(e){ $('#err').textContent='密碼不對'; }
 };
 $('#pw').addEventListener('keydown',e=>{if(e.key==='Enter')$('#go').click();});
@@ -141,9 +151,12 @@ $('#pw').addEventListener('keydown',e=>{if(e.key==='Enter')$('#go').click();});
 /* ── 後端 ── */
 async function pull(){
   if(!API) return;
-  try{ const r=await fetch(API+'?action=list',{redirect:'follow'});
+  try{ const r=await fetch(API,{method:'POST',redirect:'follow',
+         headers:{'Content-Type':'text/plain;charset=utf-8'},
+         body:JSON.stringify({action:'list',token:TOKEN})});
        const j=await r.json();
-       if(j.ok){ STATE=j.data||{}; save(); note('已同步'); render(); } }
+       if(j.ok){ STATE=j.data||{}; save(); note('已同步'); render(); }
+       else { note('認證失敗'); } }
   catch(e){ note('離線（決定先存本機）'); }
 }
 async function push(id,rec){
@@ -152,7 +165,7 @@ async function push(id,rec){
   note('儲存中⋯');
   try{ await fetch(API,{method:'POST',redirect:'follow',
         headers:{'Content-Type':'text/plain;charset=utf-8'},
-        body:JSON.stringify({action:'set',id:id,...rec})});
+        body:JSON.stringify({action:'set',id:id,token:TOKEN,...rec})});
        note('已同步 '+new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'})); }
   catch(e){ note('同步失敗，已存本機'); }
 }
@@ -221,7 +234,7 @@ function vTodo(root){
       ub.onclick=()=>{delete STATE[d.id];save();render();
         if(API)fetch(API,{method:'POST',redirect:'follow',
           headers:{'Content-Type':'text/plain;charset=utf-8'},
-          body:JSON.stringify({action:'del',id:d.id})}).then(()=>note('已取消'));};
+          body:JSON.stringify({action:'del',id:d.id,token:TOKEN})}).then(()=>note('已取消'));};
       o.appendChild(ub);}
     c.appendChild(o);
     const ta=el('textarea'); ta.placeholder='註記（選填）'; ta.value=(cur&&cur.note)||'';
