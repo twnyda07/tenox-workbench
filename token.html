@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-Hant">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>後端 token 產生器</title>
+<style>
+  :root{--bg:#faf8f5;--fg:#2b2724;--mut:#6f675f;--line:#e2dcd3;--acc:#7a5c3e}
+  :root:not([data-theme="light"]){@media (prefers-color-scheme:dark){
+    :root{--bg:#1a1714;--fg:#ece6de;--mut:#a39a8f;--line:#352f29;--acc:#c9a227}}}
+  @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+    --bg:#1a1714;--fg:#ece6de;--mut:#a39a8f;--line:#352f29;--acc:#c9a227}}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);
+    font:16px/1.7 system-ui,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif}
+  .wrap{max-width:640px;margin:0 auto;padding:48px 16px}
+  h1{font-size:21px;margin:0 0 6px}
+  .sub{color:var(--mut);font-size:14px;margin:0 0 28px}
+  label{display:block;font-size:14px;color:var(--mut);margin:0 0 6px}
+  input,button{font:inherit}
+  input{width:100%;padding:11px 13px;border:1px solid var(--line);border-radius:8px;
+    background:var(--bg);color:var(--fg)}
+  button{margin-top:14px;padding:11px 22px;border:0;border-radius:8px;
+    background:var(--acc);color:#fff;cursor:pointer}
+  button:disabled{opacity:.5;cursor:default}
+  #out{margin-top:26px;display:none}
+  code{display:block;padding:14px;border:1px solid var(--line);border-radius:8px;
+    background:rgba(127,127,127,.08);word-break:break-all;font-size:14px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+  .note{margin-top:30px;padding-top:20px;border-top:1px solid var(--line);
+    color:var(--mut);font-size:13.5px}
+  .err{color:#b3261e;font-size:14px;min-height:20px;margin-top:10px}
+</style>
+<div class="wrap">
+  <h1>後端 token 產生器</h1>
+  <p class="sub">輸入協作台密碼，算出要填進 Apps Script 的 token。</p>
+
+  <label for="pw">協作台密碼</label>
+  <input id="pw" type="password" autocomplete="current-password" placeholder="密碼">
+  <button id="go">產生</button>
+  <div class="err" id="err"></div>
+
+  <div id="out">
+    <label>把下面整串複製，填進 Apps Script 指令碼屬性 <strong>TENOX_TOKEN</strong></label>
+    <code id="tok"></code>
+    <button id="cp">複製</button>
+  </div>
+
+  <p class="note">
+    這一頁完全在你的瀏覽器裡運算，密碼和 token 都不會送到任何地方 ——
+    關掉分頁就什麼都不剩。<br><br>
+    換了協作台密碼，token 也會跟著變，必須回來重算一次並更新指令碼屬性，
+    否則所有人都會同步失敗。
+  </p>
+</div>
+<script>
+/* 必須與 index.html 的 deriveToken 完全一致 */
+async function deriveToken(pw){
+  const enc=new TextEncoder();
+  const km=await crypto.subtle.importKey('raw',enc.encode(pw),'PBKDF2',false,['deriveBits']);
+  const bits=await crypto.subtle.deriveBits(
+    {name:'PBKDF2',salt:enc.encode('tenox-backend-v1'),iterations:600000,hash:'SHA-256'},km,256);
+  return btoa(String.fromCharCode(...new Uint8Array(bits)));
+}
+const $=s=>document.querySelector(s);
+$('#go').onclick=async()=>{
+  const pw=$('#pw').value.trim();
+  if(!pw){ $('#err').textContent='請先輸入密碼'; return; }
+  $('#err').textContent=''; $('#go').disabled=true; $('#go').textContent='運算中⋯';
+  try{
+    $('#tok').textContent=await deriveToken(pw);
+    $('#out').style.display='block';
+  }catch(e){ $('#err').textContent='產生失敗：'+e.message; }
+  $('#go').disabled=false; $('#go').textContent='產生';
+};
+$('#pw').addEventListener('keydown',e=>{if(e.key==='Enter')$('#go').click();});
+$('#cp').onclick=()=>{
+  navigator.clipboard.writeText($('#tok').textContent)
+    .then(()=>{$('#cp').textContent='已複製';setTimeout(()=>$('#cp').textContent='複製',1600);})
+    .catch(()=>{$('#err').textContent='複製失敗，請手動選取';});
+};
+</script>
+</html>
