@@ -141,10 +141,18 @@ async function deriveToken(pw){
   return btoa(String.fromCharCode(...new Uint8Array(bits)));
 }
 $('#go').onclick=async()=>{
-  $('#err').textContent='解密中⋯';
   const pw=$('#pw').value.trim();
-  try{ P=await unlock(pw); TOKEN=await deriveToken(pw); start(); }
-  catch(e){ $('#err').textContent='密碼不對'; }
+  if(!pw){ $('#err').textContent='請先輸入密碼'; return; }
+  /* 分開判斷，否則缺檔與密碼錯會顯示成同一個訊息 */
+  if(!window.__ENC__){
+    $('#err').textContent='找不到 payload.enc.js —— 這一頁必須和它放在同一個資料夾';
+    return; }
+  $('#err').textContent='解密中⋯';
+  try{ P=await unlock(pw); }
+  catch(e){ $('#err').textContent='密碼不對'; return; }
+  try{ TOKEN=await deriveToken(pw); }
+  catch(e){ $('#err').textContent='密碼正確，但後端 token 產生失敗：'+e.message; return; }
+  start();
 };
 $('#pw').addEventListener('keydown',e=>{if(e.key==='Enter')$('#go').click();});
 
