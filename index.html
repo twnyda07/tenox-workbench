@@ -65,6 +65,10 @@ h3{font-size:17px;margin:20px 0 8px;color:var(--ink)}
 .tracechip.sm{display:inline-block;margin:0 4px 0 0;padding:2px 8px;font-size:12.5px}
 .tracefrom{font-size:12.5px;color:var(--gold);margin:-4px 0 10px}
 .tracefrom .nodest{color:var(--accent)}
+.io{margin-top:10px;display:flex;gap:8px;flex-wrap:wrap}
+.io button{font:inherit;font-size:13.5px;padding:5px 12px;border:1px solid var(--line);
+  background:var(--paper);color:var(--ink);border-radius:3px;cursor:pointer}
+.io button:hover{background:var(--ink);color:var(--paper)}
 .md{line-height:1.75}
 .md .md-h1{font-size:22px;margin:0 0 14px;border:0}
 .md .md-h2{font-size:19px;border-bottom:1px solid var(--line);padding-bottom:6px;margin:30px 0 12px}
@@ -349,10 +353,41 @@ function vArch(root){
 /* ── 待裁示 ── */
 function vTodo(root){
   const ds=P.decisions, done=ds.filter(d=>STATE[d.id]).length;
-  root.appendChild(el('div','card',
+  const head=el('div','card',
     `<span class="stat"><b>${done}</b> / ${ds.length} 已決定</span>`+
     `<span class="stat">未決 <b>${ds.length-done}</b></span>`+
-    `<span class="sub">決定會即時同步給其他人。先在右上角填你的名字。</span>`));
+    `<span class="sub">決定先存這台電腦，再試著同步到後端。</span>`);
+  /* 裁示存在這台電腦的瀏覽器裡（localStorage），換一台電腦就看不到。
+     後端同步若失敗，這兩個鈕是唯一把裁示帶走的方法。 */
+  const io=el('div','io');
+  const bExp=el('button',null,`匯出這台的裁示（${done} 項）`);
+  bExp.onclick=()=>{
+    const blob=new Blob([JSON.stringify({kind:'tenox-decisions',who:WHO,
+      savedAt:new Date().toISOString(),count:done,state:STATE},null,1)],
+      {type:'application/json'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download='十牛圖裁示_'+(WHO||'未署名')+'_'+new Date().toISOString().slice(0,10)+'.json';
+    a.click(); URL.revokeObjectURL(a.href);
+  };
+  const bImp=el('button',null,'匯入裁示檔');
+  const file=el('input'); file.type='file'; file.accept='.json'; file.style.display='none';
+  bImp.onclick=()=>file.click();
+  file.onchange=async()=>{
+    const f=file.files[0]; if(!f) return;
+    try{
+      const j=JSON.parse(await f.text());
+      const incoming=j.state||j;
+      let add=0, over=0;
+      Object.keys(incoming).forEach(k=>{ if(!(k in STATE)) add++; else if(JSON.stringify(STATE[k])!==JSON.stringify(incoming[k])) over++; });
+      if(over && !confirm(`這個檔有 ${add} 項是新的、${over} 項和這台現有的不一樣。\n按確定會以檔案為準覆蓋那 ${over} 項。`)) return;
+      STATE=Object.assign({},STATE,incoming); save(); render();
+      note(`已匯入 ${add+over} 項（新增 ${add}、覆蓋 ${over}）`);
+    }catch(e){ alert('讀不出這個檔：'+e.message); }
+  };
+  io.appendChild(bExp); io.appendChild(bImp); io.appendChild(file);
+  head.appendChild(io);
+  root.appendChild(head);
   const kinds=[...new Set(ds.map(d=>d.kind))];
   const bar=el('div','filters');
   bar.innerHTML=`<select id="fk"><option value="">全部類別</option>${kinds.map(k=>
