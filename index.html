@@ -56,6 +56,31 @@ main{padding:22px 0 80px}
 .mat .src{color:var(--gold);font-size:12.5px}
 h2{font-size:21px;border-bottom:1px solid var(--line);padding-bottom:6px;margin:26px 0 14px}
 h3{font-size:17px;margin:20px 0 8px;color:var(--ink)}
+.archjump{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.archjump a{font-size:13.5px;padding:4px 10px;border:1px solid var(--line);border-radius:3px;
+  background:var(--paper);color:var(--ink);text-decoration:none}
+.archjump a:hover{background:var(--ink);color:var(--paper)}
+.md{line-height:1.75}
+.md .md-h1{font-size:22px;margin:0 0 14px;border:0}
+.md .md-h2{font-size:19px;border-bottom:1px solid var(--line);padding-bottom:6px;margin:30px 0 12px}
+.md .md-h3{font-size:17.5px;margin:26px 0 10px;padding-left:9px;border-left:4px solid var(--gold);color:var(--ink)}
+.md .md-h4{font-size:15.5px;margin:18px 0 7px;color:var(--ink2)}
+.md ul.md-l{list-style:none;margin:7px 0;padding:0}
+.md li.md-top{margin:5px 0;padding-left:14px;position:relative;font-size:15px}
+.md li.md-top::before{content:"";position:absolute;left:2px;top:.72em;width:5px;height:5px;
+  border-radius:50%;background:var(--gold)}
+.md li.md-sub{margin:3px 0 3px 22px;padding-left:12px;position:relative;
+  font-size:14px;color:var(--ink2)}
+.md li.md-sub::before{content:"－";position:absolute;left:0;opacity:.5}
+.md blockquote{margin:10px 0;padding:9px 14px;background:var(--paper);
+  border-left:3px solid var(--line);color:var(--ink2);font-size:14.5px}
+.md hr{border:0;border-top:1px solid var(--line);margin:26px 0}
+.md p{margin:8px 0;font-size:15px}
+.md code{background:var(--paper);padding:1px 5px;border-radius:3px;font-size:13.5px}
+.md .md-pre{background:var(--paper);border:1px solid var(--line);border-radius:3px;
+  padding:11px 14px;margin:10px 0;font-size:13.5px;line-height:1.6;color:var(--ink2);
+  white-space:pre-wrap;overflow-x:auto}
+.md table{margin:10px 0}
 .verse{white-space:pre-wrap;background:var(--paper);border:1px solid var(--line);
   padding:10px 14px;border-radius:3px;font-size:14.5px;color:var(--ink2)}
 table{border-collapse:collapse;width:100%;font-size:14px}
@@ -99,6 +124,7 @@ footer{border-top:1px solid var(--line);color:var(--ink2);font-size:13px;padding
        <div class="sub" id="hsub"></div></div>
   <nav>
     <button data-v="todo" class="on">待裁示</button>
+    <button data-v="arch">架構草案</button>
     <button data-v="book">十冊撰稿本</button>
     <button data-v="koan">公案總帳</button>
     <button data-v="ppl">人物事例</button>
@@ -198,7 +224,61 @@ function start(){
 let VIEW='todo', F={kind:'',vol:'',st:'',q:''};
 
 function render(){ const v=$('#view'); v.innerHTML='';
-  ({todo:vTodo,book:vBook,koan:vKoan,ppl:vPpl})[VIEW](v); }
+  ({todo:vTodo,arch:vArch,book:vBook,koan:vKoan,ppl:vPpl})[VIEW](v); }
+
+/* ── 架構草案（B 組體例）── */
+function mdInline(s){
+  return esc(s)
+    .replace(/`([^`]+)`/g,'<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');
+}
+function mdRender(src){
+  const L=src.split('\n'), out=[]; let i=0, list=null;
+  const closeList=()=>{ if(list){out.push('</ul>'); list=null;} };
+  while(i<L.length){
+    const ln=L[i];
+    if(/^\s*$/.test(ln)){ closeList(); i++; continue; }
+    if(/^```/.test(ln)){ closeList(); i++;
+      const code=[]; while(i<L.length && !/^```/.test(L[i])){ code.push(L[i]); i++; }
+      i++; out.push('<pre class="md-pre">'+esc(code.join('\n'))+'</pre>'); continue; }
+    if(/^---+\s*$/.test(ln)){ closeList(); out.push('<hr>'); i++; continue; }
+    let m=ln.match(/^(#{1,6})\s+(.*)$/);
+    if(m){ closeList();
+      const lv=m[1].length, txt=m[2];
+      const a=txt.match(/^第(.)冊/);
+      out.push(`<h${lv}${a?' id="a'+'一二三四五六七八九十'.indexOf(a[1])+'"':''} class="md-h${lv}">${mdInline(txt)}</h${lv}>`);
+      i++; continue; }
+    if(/^\|/.test(ln)){ closeList();
+      const rows=[]; while(i<L.length && /^\|/.test(L[i])){ rows.push(L[i]); i++; }
+      const cells=r=>r.replace(/^\||\|$/g,'').split('|').map(c=>c.trim());
+      let html='<table>';
+      rows.forEach((r,ri)=>{
+        if(ri===1 && /^[\s|:-]+$/.test(r)) return;
+        const tag=ri===0?'th':'td';
+        html+='<tr>'+cells(r).map(c=>`<${tag}>${mdInline(c)}</${tag}>`).join('')+'</tr>';
+      });
+      out.push(html+'</table>'); continue; }
+    if(/^>\s?/.test(ln)){ closeList();
+      const q=[]; while(i<L.length && /^>\s?/.test(L[i])){ q.push(L[i].replace(/^>\s?/,'')); i++; }
+      out.push('<blockquote>'+q.map(mdInline).join('<br>')+'</blockquote>'); continue; }
+    m=ln.match(/^(\s*)([-*]|\d+\.)\s+(.*)$/);
+    if(m){ const ind=m[1].length, deep=ind>=3;
+      if(!list){ out.push('<ul class="md-l">'); list=1; }
+      out.push(`<li class="${deep?'md-sub':'md-top'}">${mdInline(m[3])}</li>`);
+      i++; continue; }
+    closeList(); out.push('<p>'+mdInline(ln)+'</p>'); i++;
+  }
+  closeList();
+  return out.join('');
+}
+function vArch(root){
+  if(!P.arch){ root.appendChild(el('div','card','<p>這一版 payload 還沒有架構草案。</p>')); return; }
+  const nav=el('div','card','<p class="sub">十冊架構　B 組體例草案（法門獨立成章）　2026-10-06・待主編裁示</p>');
+  const jump=el('div','archjump');
+  CN.forEach((c,k)=>{ const a=el('a',null,'第'+c+'冊'); a.href='#a'+k; jump.appendChild(a); });
+  nav.appendChild(jump); root.appendChild(nav);
+  const box=el('div','card md'); box.innerHTML=mdRender(P.arch); root.appendChild(box);
+}
 
 /* ── 待裁示 ── */
 function vTodo(root){
