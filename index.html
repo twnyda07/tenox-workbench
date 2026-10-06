@@ -56,10 +56,15 @@ main{padding:22px 0 80px}
 .mat .src{color:var(--gold);font-size:12.5px}
 h2{font-size:21px;border-bottom:1px solid var(--line);padding-bottom:6px;margin:26px 0 14px}
 h3{font-size:17px;margin:20px 0 8px;color:var(--ink)}
-.archjump{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
-.archjump a{font-size:13.5px;padding:4px 10px;border:1px solid var(--line);border-radius:3px;
-  background:var(--paper);color:var(--ink);text-decoration:none}
-.archjump a:hover{background:var(--ink);color:var(--paper)}
+.tracegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:6px;margin-top:10px}
+.tracechip{display:block;font-size:13.5px;padding:5px 10px;border:1px solid var(--line);
+  border-radius:3px;background:var(--paper);color:var(--ink2);text-decoration:none}
+.tracechip b{color:var(--ink);font-weight:700}
+.tracechip:hover{background:var(--ink);color:var(--paper)}
+.tracechip:hover b{color:var(--paper)}
+.tracechip.sm{display:inline-block;margin:0 4px 0 0;padding:2px 8px;font-size:12.5px}
+.tracefrom{font-size:12.5px;color:var(--gold);margin:-4px 0 10px}
+.tracefrom .nodest{color:var(--accent)}
 .md{line-height:1.75}
 .md .md-h1{font-size:22px;margin:0 0 14px;border:0}
 .md .md-h2{font-size:19px;border-bottom:1px solid var(--line);padding-bottom:6px;margin:30px 0 12px}
@@ -72,6 +77,13 @@ h3{font-size:17px;margin:20px 0 8px;color:var(--ink)}
 .md li.md-sub{margin:3px 0 3px 22px;padding-left:12px;position:relative;
   font-size:14px;color:var(--ink2)}
 .md li.md-sub::before{content:"－";position:absolute;left:0;opacity:.5}
+.md li.md-ch{margin:9px 0 3px;padding-left:38px;position:relative;font-size:15.5px;font-weight:700}
+.md li.md-ch .chno{position:absolute;left:0;top:0;min-width:28px;text-align:center;
+  font-size:12.5px;font-weight:400;color:var(--paper);background:var(--gold);
+  border-radius:3px;padding:1px 5px;line-height:1.5}
+.md .md-part{margin:24px 0 8px;padding:6px 12px;background:var(--paper);
+  border-left:4px solid var(--ink);border-radius:2px;font-size:16px;font-weight:700}
+.md .md-part .src{font-weight:400;font-size:12.5px;color:var(--gold);margin-left:8px}
 .md blockquote{margin:10px 0;padding:9px 14px;background:var(--paper);
   border-left:3px solid var(--line);color:var(--ink2);font-size:14.5px}
 .md hr{border:0;border-top:1px solid var(--line);margin:26px 0}
@@ -217,12 +229,15 @@ function start(){
   const nmat=P.vols.reduce((n,v)=>n+v.chapters.reduce((m,c)=>m+c.sections.reduce((k,s)=>k+s.m.length,0),0),0);
   $('#hsub').textContent=`十冊 ${nsec} 節・${nmat} 則素材・公案總帳 ${P.ledger.rows.length} 則・待裁示 ${P.decisions.length} 項`;
   document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
-    document.querySelectorAll('nav button').forEach(x=>x.classList.remove('on'));
-    b.classList.add('on'); VIEW=b.dataset.v; render(); window.scrollTo(0,0);});
+    setView(b.dataset.v); render(); window.scrollTo(0,0);});
   pull(); render();
 }
 let VIEW='todo', F={kind:'',vol:'',st:'',q:''};
 
+function setView(name){
+  VIEW=name;
+  document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===name));
+}
 function render(){ const v=$('#view'); v.innerHTML='';
   ({todo:vTodo,arch:vArch,book:vBook,koan:vKoan,ppl:vPpl})[VIEW](v); }
 
@@ -261,23 +276,74 @@ function mdRender(src){
     if(/^>\s?/.test(ln)){ closeList();
       const q=[]; while(i<L.length && /^>\s?/.test(L[i])){ q.push(L[i].replace(/^>\s?/,'')); i++; }
       out.push('<blockquote>'+q.map(mdInline).join('<br>')+'</blockquote>'); continue; }
-    m=ln.match(/^(\s*)([-*]|\d+\.)\s+(.*)$/);
-    if(m){ const ind=m[1].length, deep=ind>=3;
+    /* 部：**▸ 部一　…** 單獨一行，要比章更顯眼 */
+    m=ln.match(/^\*\*▸\s*(.+?)\*\*(.*)$/);
+    if(m){ closeList();
+      out.push(`<div class="md-part">${mdInline(m[1])}<span class="src">${mdInline(m[2])}</span></div>`);
+      i++; continue; }
+    m=ln.match(/^(\s*)([-*]|(\d+)\.)\s+(.*)$/);
+    if(m){ const ind=m[1].length, deep=ind>=3, num=m[3];
       if(!list){ out.push('<ul class="md-l">'); list=1; }
-      out.push(`<li class="${deep?'md-sub':'md-top'}">${mdInline(m[3])}</li>`);
+      /* 章號一定要印出來，對照表是用章號指路的 */
+      out.push(num
+        ? `<li class="md-ch"><span class="chno">${num}</span>${mdInline(m[4])}</li>`
+        : `<li class="${deep?'md-sub':'md-top'}">${mdInline(m[4])}</li>`);
       i++; continue; }
     closeList(); out.push('<p>'+mdInline(ln)+'</p>'); i++;
   }
   closeList();
   return out.join('');
 }
+let ARCHPAGE='head';   /* 'head' | 'tail' | 1..10 */
 function vArch(root){
-  if(!P.arch){ root.appendChild(el('div','card','<p>這一版 payload 還沒有架構草案。</p>')); return; }
-  const nav=el('div','card','<p class="sub">十冊架構　B 組體例草案（法門獨立成章）　2026-10-06・待主編裁示</p>');
-  const jump=el('div','archjump');
-  CN.forEach((c,k)=>{ const a=el('a',null,'第'+c+'冊'); a.href='#a'+k; jump.appendChild(a); });
-  nav.appendChild(jump); root.appendChild(nav);
-  const box=el('div','card md'); box.innerHTML=mdRender(P.arch); root.appendChild(box);
+  const A=P.arch;
+  if(!A||typeof A!=='object'){ root.appendChild(el('div','card','<p>這一版 payload 還沒有架構草案。請重跑 build_payload.py。</p>')); return; }
+
+  const cols=el('div','cols'); root.appendChild(cols);
+  const side=el('div','side'); cols.appendChild(side);
+  const body=el('div'); cols.appendChild(body);
+
+  const pick=(k,label)=>{ const a=el('a',ARCHPAGE==k?'on':null,label);
+    a.href='javascript:void 0'; a.onclick=()=>{ARCHPAGE=k;render();window.scrollTo(0,0);};
+    side.appendChild(a); };
+  side.appendChild(el('div','grp','總說'));
+  pick('head','體例・法門總說・法門總帳');
+  side.appendChild(el('div','grp','十冊'));
+  A.vols.forEach(v=>pick(v.n,'第'+CN[v.n-1]+'冊　'+v.name));
+  side.appendChild(el('div','grp','附錄'));
+  pick('tail','舊章去向・待裁示・更正');
+
+  if(ARCHPAGE==='head'||ARCHPAGE==='tail'){
+    const md=ARCHPAGE==='head'?A.head:A.tail;
+    const box=el('div','card md'); box.innerHTML=mdRender(md); body.appendChild(box);
+    return;
+  }
+
+  const v=A.vols.find(x=>x.n==ARCHPAGE);
+  /* 本冊吸收了舊撰稿本哪幾章 —— 這一塊就是拿來跟「十冊撰稿本」分頁對照的 */
+  const inbound={};                       /* 舊 key -> [本冊新章] */
+  Object.keys(A.trace).forEach(k=>{
+    A.trace[k].forEach(loc=>{ if(+loc.split('-')[0]===v.n)
+      (inbound[k]=inbound[k]||[]).push(loc); });
+  });
+  const keys=Object.keys(inbound).sort((a,b)=>{const[p,q]=a.split('-').map(Number),[r,s]=b.split('-').map(Number);return p-r||q-s;});
+  const map=el('div','card');
+  map.appendChild(el('h3',null,`第${CN[v.n-1]}冊　${v.name}　—　本冊吸收的舊撰稿本章`));
+  map.appendChild(el('p','sub','點舊章可跳到「十冊撰稿本」分頁對照。括號內是本冊的新章號。'));
+  const wrap=el('div','tracegrid');
+  keys.forEach(k=>{
+    const [ov,oc]=k.split('-');
+    const a=el('a','tracechip',`舊第${CN[ov-1]}冊 ${oc} 章　<b>→ ${inbound[k].map(x=>x.split('-')[1]+' 章').join('、')}</b>`);
+    a.href='javascript:void 0';
+    a.onclick=()=>{ setView('book'); render(); window.scrollTo(0,0);
+      setTimeout(()=>{const t=document.getElementById('v'+ov+'c'+oc); if(t)t.scrollIntoView();},60); };
+    wrap.appendChild(a);
+  });
+  map.appendChild(wrap); body.appendChild(map);
+
+  const box=el('div','card md');
+  box.innerHTML=mdRender(`### 第${CN[v.n-1]}冊　${v.name}\n`+v.md);
+  body.appendChild(box);
 }
 
 /* ── 待裁示 ── */
@@ -358,6 +424,21 @@ function vBook(root){
     v.chapters.forEach(c=>{
       const h=el('h3',null,`<a id="v${v.n}c${c.num}"></a>第 ${c.num} 章　${esc(c.title)}`);
       body.appendChild(h);
+      /* 這一章在新架構（B 組體例）的去向 —— 兩份稿對照用 */
+      const dest=(P.arch&&P.arch.trace)?P.arch.trace[v.n+'-'+c.num]:null;
+      const line=el('div','tracefrom');
+      if(dest&&dest.length){
+        line.innerHTML='新架構 → ';
+        dest.forEach((loc,li)=>{ const [nv,nc]=loc.split('-');
+          if(li) line.appendChild(document.createTextNode('　'));
+          const a=el('a','tracechip sm',+nv===v.n?`${nc} 章`:`第${CN[nv-1]}冊 ${nc} 章`);
+          a.href='javascript:void 0';
+          a.onclick=()=>{ setView('arch'); ARCHPAGE=+nv; render(); window.scrollTo(0,0); };
+          line.appendChild(a); });
+      } else if(P.arch&&P.arch.trace){
+        line.innerHTML='<span class="nodest">新架構尚未吸收這一章</span>';
+      }
+      if(line.innerHTML) body.appendChild(line);
       c.sections.forEach(s=>{
         const d=el('div','sec'+(s.thin?' thin':''));
         d.innerHTML=`<h4>${esc(s.t)}<span class="badge">${s.m.length} 則</span>`+
