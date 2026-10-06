@@ -69,6 +69,9 @@ h3{font-size:17px;margin:20px 0 8px;color:var(--ink)}
 .io button{font:inherit;font-size:13.5px;padding:5px 12px;border:1px solid var(--line);
   background:var(--paper);color:var(--ink);border-radius:3px;cursor:pointer}
 .io button:hover{background:var(--ink);color:var(--paper)}
+.warnbox{border-left:4px solid var(--accent)}
+.warnbox b{color:var(--accent)}
+.warnbox .use{color:var(--ink2);font-size:14.5px;margin:6px 0 0}
 .md{line-height:1.75}
 .md .md-h1{font-size:22px;margin:0 0 14px;border:0}
 .md .md-h2{font-size:19px;border-bottom:1px solid var(--line);padding-bottom:6px;margin:30px 0 12px}
@@ -156,7 +159,7 @@ footer{border-top:1px solid var(--line);color:var(--ink2);font-size:13px;padding
 <script src="payload.enc.js"></script>
 <script>
 const CN='一二三四五六七八九十'.split('');
-let P=null, WHO='', STATE={}, API='', TOKEN='';
+let P=null, WHO='', STATE={}, API='', TOKEN='', SYNCOK=null;
 const $=s=>document.querySelector(s), el=(t,c,h)=>{const e=document.createElement(t);
   if(c)e.className=c; if(h!=null)e.innerHTML=h; return e;};
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -205,9 +208,9 @@ async function pull(){
          headers:{'Content-Type':'text/plain;charset=utf-8'},
          body:JSON.stringify({action:'list',token:TOKEN})});
        const j=await r.json();
-       if(j.ok){ STATE=j.data||{}; save(); note('已同步'); render(); }
-       else { note('認證失敗'); } }
-  catch(e){ note('離線（決定先存本機）'); }
+       if(j.ok){ STATE=j.data||{}; SYNCOK=true; save(); note('已同步'); render(); }
+       else { SYNCOK=false; note('後端未認證'); render(); } }
+  catch(e){ SYNCOK=false; note('後端連不上'); render(); }
 }
 async function push(id,rec){
   STATE[id]=rec; save(); render();
@@ -359,6 +362,12 @@ function vTodo(root){
     `<span class="sub">決定先存這台電腦，再試著同步到後端。</span>`);
   /* 裁示存在這台電腦的瀏覽器裡（localStorage），換一台電腦就看不到。
      後端同步若失敗，這兩個鈕是唯一把裁示帶走的方法。 */
+  if(SYNCOK===false){
+    root.appendChild(el('div','card warnbox',
+      '<b>後端沒有接上，你的裁示只存在這一台電腦的這一個瀏覽器裡。</b>'+
+      '<p class="use">換一台電腦看不到，<b>清掉瀏覽器資料就會永久消失</b>。'+
+      '先按下面的「匯出這台的裁示」留一份檔案，再把檔案帶到另一台用「匯入」。</p>'));
+  }
   const io=el('div','io');
   const bExp=el('button',null,`匯出這台的裁示（${done} 項）`);
   bExp.onclick=()=>{
