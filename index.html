@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<meta name="build" content="20261008-0010">
+<meta name="build" content="20261008-0015">
 <title>十牛圖修行指南　編輯協作台</title>
 <style>
 :root{
@@ -28,6 +28,8 @@ nav button.on{background:var(--ink);color:var(--paper);border-color:var(--ink)}
 #who{font-size:13px;padding:5px 9px;border:1px solid var(--line);border-radius:3px;
   background:var(--paper);color:var(--ink);font-family:inherit;width:120px}
 #sync{font-size:12px;color:var(--ink2)}
+#who.ok{border-color:var(--ok)}
+#whook{font-size:12px;color:var(--ok);margin-left:-4px}
 main{padding:22px 0 80px}
 .gate{max-width:420px;margin:16vh auto;text-align:center}
 .gate input{font:inherit;font-size:16px;padding:9px 12px;border:1px solid var(--line);
@@ -187,7 +189,7 @@ footer{border-top:1px solid var(--line);color:var(--ink2);font-size:13px;padding
     <button data-v="ppl">人物事例</button>
     <button data-v="todo" class="dim">舊裁示 212</button>
   </nav>
-  <input id="who" placeholder="你的名字">
+  <input id="who" placeholder="你的名字（裁示會署名）"><span id="whook"></span>
   <span id="sync">—</span>
 </div></header>
 <main><div class="wrap" id="view"></div></main>
@@ -195,7 +197,7 @@ footer{border-top:1px solid var(--line);color:var(--ink2);font-size:13px;padding
 </div>
 
 <script src="config.js"></script>
-<script src="payload.enc.js?v=20261008-0010"></script>
+<script src="payload.enc.js?v=20261008-0015"></script>
 <script>
 const CN='一二三四五六七八九十'.split('');
 let P=null, WHO='', STATE={}, API='', TOKEN='', SYNCOK=null;
@@ -247,7 +249,7 @@ async function pull(){
          headers:{'Content-Type':'text/plain;charset=utf-8'},
          body:JSON.stringify({action:'list',token:TOKEN})});
        const j=await r.json();
-       if(!j.ok){ SYNCOK=false; note('後端未認證'); render(); return; }
+       if(!j.ok){ SYNCOK=false; note('裁示只存這台電腦'); render(); return; }
 
        const remote=j.data||{}, nR=Object.keys(remote).length, nL=Object.keys(STATE).length;
        /* 絕對不要用後端的資料「取代」本機。
@@ -256,11 +258,11 @@ async function pull(){
           2026-10-06 使用者在 venjianhui 那台的 212 項裁示就是這樣消失的。
           寧可不同步，也不要毀掉本機資料。 */
        if(nR===0 && nL>0){
-         SYNCOK=false; note(`後端是空的，已保留本機 ${nL} 項`); render(); return;
+         SYNCOK=false; note(`裁示只存這台電腦（${nL} 項）`); render(); return;
        }
        STATE=Object.assign({},STATE,remote);   /* 合併，不是取代 */
        SYNCOK=true; save(); note('已同步'); render(); }
-  catch(e){ SYNCOK=false; note('後端連不上'); render(); }
+  catch(e){ SYNCOK=false; note('裁示只存這台電腦'); render(); }
 }
 async function push(id,rec){
   STATE[id]=rec; save(); render();
@@ -290,7 +292,9 @@ function start(){
   }catch(e){}
   WHO=localStorage.getItem('tenox_who')||'';
   $('#who').value=WHO;
-  $('#who').oninput=e=>{WHO=e.target.value.trim();localStorage.setItem('tenox_who',WHO);};
+  const whoTick=()=>{ $('#whook').textContent=WHO?'✓ '+WHO:''; $('#who').classList.toggle('ok',!!WHO); };
+  whoTick();
+  $('#who').oninput=e=>{WHO=e.target.value.trim();localStorage.setItem('tenox_who',WHO);whoTick();};
   const nsec=P.vols.reduce((n,v)=>n+v.chapters.reduce((m,c)=>m+c.sections.length,0),0);
   const nmat=P.vols.reduce((n,v)=>n+v.chapters.reduce((m,c)=>m+c.sections.reduce((k,s)=>k+s.m.length,0),0),0);
   const nch=(P.arch&&P.arch.vols&&P.arch.vols[0].parts)
