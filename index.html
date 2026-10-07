@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<meta name="build" content="20261008-0029">
+<meta name="build" content="20261008-0036">
 <title>十牛圖修行指南　編輯協作台</title>
 <style>
 :root{
@@ -97,6 +97,9 @@ h3{font-size:17px;margin:20px 0 8px;color:var(--ink)}
 .kind.k-法門{border-color:var(--accent);color:var(--accent)}
 .kind.k-公案{border-color:var(--gold);color:var(--gold)}
 .chnote{margin:6px 0 0;font-size:13px;color:var(--warn)}
+.chthin{margin:7px 0 0;padding:6px 10px;background:var(--paper);
+  border-left:3px solid var(--line);border-radius:2px;font-size:13px;color:var(--ink2)}
+.chthin .src{color:var(--gold);font-size:12px}
 .chwarn{margin:7px 0 0;padding:6px 10px;background:var(--paper);
   border-left:3px solid var(--warn);border-radius:2px;font-size:13.5px;color:var(--ink2)}
 .revch details{margin:7px 0 0}
@@ -200,7 +203,7 @@ footer{border-top:1px solid var(--line);color:var(--ink2);font-size:13px;padding
 </div>
 
 <script src="config.js"></script>
-<script src="payload.enc.js?v=20261008-0029"></script>
+<script src="payload.enc.js?v=20261008-0036"></script>
 <script>
 const CN='一二三四五六七八九十'.split('');
 let P=null, WHO='', STATE={}, API='', TOKEN='', SYNCOK=null;
@@ -366,8 +369,9 @@ function vRev(root){
   const body=el('div'); cols.appendChild(body);
 
   side.appendChild(el('div','grp',`全書 ${st.all.done} / ${st.all.tot} 章`));
-  if(A.nwarn) side.appendChild(el('div','sub',
-    `${A.nwarn} 章有重複警示`));
+  const nthin=A.vols.reduce((k,v)=>k+v.parts.reduce((j,p)=>j+p.chapters.filter(c=>c.thin).length,0),0);
+  if(A.nwarn||nthin) side.appendChild(el('div','sub',
+    [A.nwarn?`${A.nwarn} 章重複警示`:'', nthin?`${nthin} 章待確認素材`:''].filter(Boolean).join('・')));
   side.appendChild(el('div','bar',`<i style="width:${st.all.tot?st.all.done/st.all.tot*100:0}%"></i>`));
   A.vols.forEach(v=>{
     const s=st[v.n];
@@ -422,6 +426,12 @@ function revCard(v,c){
     (rec&&rec.mv?`<span class="badge f">移到第${CN[rec.mv-1]}冊</span>`:'')));
 
   if(c.note) d.appendChild(el('div','chnote','※ '+esc(c.note.replace(/\*\*/g,''))));
+
+  /* 回原稿找不到明顯對應的段落。是提示不是定論——法師可能講過只是用詞不同，
+     所以把最接近的那一段也列出來，讓人自己判斷。 */
+  if(c.thin) d.appendChild(el('div','chthin',
+    '回原稿沒找到明顯對應的開示段落，請確認有沒有內容可放。<br>'+
+    '最接近的是：<b>'+esc(c.thin.near)+'</b>　<span class="src">'+esc(c.thin.src)+'</span>'));
 
   /* 兩冊都寫成完整敘述 —— 規則是一則只能一冊完整講，審到這裡要擇一 */
   if(c.warn) c.warn.forEach(w=>{
