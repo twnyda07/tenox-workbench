@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<meta name="build" content="20261008-0710">
+<meta name="build" content="20261008-0734">
 <title>十牛圖修行指南　編輯協作台</title>
 <style>
 :root{
@@ -203,10 +203,10 @@ footer{border-top:1px solid var(--line);color:var(--ink2);font-size:13px;padding
 </div>
 
 <script src="config.js"></script>
-<script src="payload.enc.js?v=20261008-0710"></script>
+<script src="payload.enc.js?v=20261008-0734"></script>
 <script>
 const CN='一二三四五六七八九十'.split('');
-let P=null, WHO='', STATE={}, API='', TOKEN='', SYNCOK=null;
+let P=null, WHO='', STATE={}, API='', TOKEN='', SYNCOK=null, SEEDADD=0;
 const $=s=>document.querySelector(s), el=(t,c,h)=>{const e=document.createElement(t);
   if(c)e.className=c; if(h!=null)e.innerHTML=h; return e;};
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -255,7 +255,7 @@ async function pull(){
          headers:{'Content-Type':'text/plain;charset=utf-8'},
          body:JSON.stringify({action:'list',token:TOKEN})});
        const j=await r.json();
-       if(!j.ok){ SYNCOK=false; note('裁示只存這台電腦'); render(); return; }
+       if(!j.ok){ SYNCOK=null; note('雲端讀取待修，裁示仍會上傳'); render(); return; }
 
        const remote=j.data||{}, nR=Object.keys(remote).length, nL=Object.keys(STATE).length;
        /* 絕對不要用後端的資料「取代」本機。
@@ -268,17 +268,22 @@ async function pull(){
        }
        STATE=Object.assign({},STATE,remote);   /* 合併，不是取代 */
        SYNCOK=true; save(); note('已同步'); render(); }
-  catch(e){ SYNCOK=false; note('裁示只存這台電腦'); render(); }
+  catch(e){ SYNCOK=null; note('雲端讀取待修，裁示仍會上傳'); render(); }
 }
 async function push(id,rec){
   STATE[id]=rec; save(); render();
   if(!API){ note('本機已存（後端未設定）'); return; }
   note('儲存中⋯');
-  try{ await fetch(API,{method:'POST',redirect:'follow',
+  /* push 的回應才是「有沒有真的上雲」的憑據——後端 list 讀不回來，
+     但 set/del 是通的，所以不能用 pull 的結果來判斷。 */
+  try{ const r=await fetch(API,{method:'POST',redirect:'follow',
         headers:{'Content-Type':'text/plain;charset=utf-8'},
         body:JSON.stringify({action:'set',id:id,token:TOKEN,...rec})});
-       note('已同步 '+new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'})); }
-  catch(e){ note('同步失敗，已存本機'); }
+       const j=await r.json().catch(()=>({}));
+       if(j.ok){ SYNCOK=true;
+         note('已上傳雲端 '+new Date().toLocaleTimeString('zh-TW',{hour:'2-digit',minute:'2-digit'})); }
+       else { SYNCOK=false; note('上傳失敗，已存這台電腦'); render(); } }
+  catch(e){ SYNCOK=false; note('上傳失敗，已存這台電腦'); render(); }
 }
 const save=()=>localStorage.setItem('tenox_state',JSON.stringify(STATE));
 const note=t=>$('#sync').textContent=t;
@@ -296,6 +301,13 @@ function start(){
       while(baks.length>5) localStorage.removeItem(baks.shift());
     }
   }catch(e){}
+  /* 後端的 list 還讀不回來，改由 build_payload.py 從試算表把兩台的裁示
+     烘進 payload。本機已有的不覆蓋——正在審的人說了算。 */
+  if(P.seed){
+    let add=0;
+    Object.keys(P.seed).forEach(k=>{ if(!(k in STATE)){ STATE[k]=P.seed[k]; add++; } });
+    if(add){ save(); SEEDADD=add; }
+  }
   WHO=localStorage.getItem('tenox_who')||'';
   $('#who').value=WHO;
   const whoTick=()=>{ $('#whook').textContent=WHO?'✓ '+WHO:''; $('#who').classList.toggle('ok',!!WHO); };
@@ -600,6 +612,8 @@ function vTodo(root){
     `<span class="sub">決定先存這台電腦，再試著同步到後端。</span>`);
   /* 裁示存在這台電腦的瀏覽器裡（localStorage），換一台電腦就看不到。
      後端同步若失敗，這兩個鈕是唯一把裁示帶走的方法。 */
+  if(SEEDADD) root.appendChild(el('div','card',
+    `<p class="sub">這一版帶進了雲端的 ${SEEDADD} 項裁示（另一台存的）。本機已有的不覆蓋。</p>`));
   if(SYNCOK===false){
     root.appendChild(el('div','card warnbox',
       '<b>後端沒有接上，你的裁示只存在這一台電腦的這一個瀏覽器裡。</b>'+
