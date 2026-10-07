@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<meta name="build" content="20261008-0015">
+<meta name="build" content="20261008-0024">
 <title>十牛圖修行指南　編輯協作台</title>
 <style>
 :root{
@@ -96,6 +96,8 @@ h3{font-size:17px;margin:20px 0 8px;color:var(--ink)}
 .kind{font-size:11.5px;padding:1px 7px;border-radius:9px;border:1px solid var(--line);color:var(--ink2)}
 .kind.k-法門{border-color:var(--accent);color:var(--accent)}
 .kind.k-公案{border-color:var(--gold);color:var(--gold)}
+.chwarn{margin:7px 0 0;padding:6px 10px;background:var(--paper);
+  border-left:3px solid var(--warn);border-radius:2px;font-size:13.5px;color:var(--ink2)}
 .revch details{margin:7px 0 0}
 .revch summary{cursor:pointer}
 .secs{margin:6px 0 0;padding-left:18px;font-size:14px;color:var(--ink2)}
@@ -197,7 +199,7 @@ footer{border-top:1px solid var(--line);color:var(--ink2);font-size:13px;padding
 </div>
 
 <script src="config.js"></script>
-<script src="payload.enc.js?v=20261008-0015"></script>
+<script src="payload.enc.js?v=20261008-0024"></script>
 <script>
 const CN='一二三四五六七八九十'.split('');
 let P=null, WHO='', STATE={}, API='', TOKEN='', SYNCOK=null;
@@ -363,6 +365,8 @@ function vRev(root){
   const body=el('div'); cols.appendChild(body);
 
   side.appendChild(el('div','grp',`全書 ${st.all.done} / ${st.all.tot} 章`));
+  if(A.nwarn) side.appendChild(el('div','sub',
+    `${A.nwarn} 章有重複警示`));
   side.appendChild(el('div','bar',`<i style="width:${st.all.tot?st.all.done/st.all.tot*100:0}%"></i>`));
   A.vols.forEach(v=>{
     const s=st[v.n];
@@ -415,6 +419,18 @@ function revCard(v,c){
     `<b>${esc(title)}</b>`+
     (rec&&rec.t?`<span class="badge">標題已改</span>`:'')+
     (rec&&rec.mv?`<span class="badge f">移到第${CN[rec.mv-1]}冊</span>`:'')));
+
+  /* 兩冊都寫成完整敘述 —— 規則是一則只能一冊完整講，審到這裡要擇一 */
+  if(c.warn) c.warn.forEach(w=>{
+    const [ov,on]=w.other.split('-');
+    const line=el('div','chwarn',`⚠ ${esc(w.why)}：另一處在 `);
+    const a=el('a','tracechip sm',`第${CN[ov-1]}冊 ${on} 章`);
+    a.href='javascript:void 0';
+    a.onclick=()=>{ REVVOL=+ov; render(); window.scrollTo(0,0); };
+    line.appendChild(a);
+    line.appendChild(document.createTextNode('　'+w.otherTitle));
+    d.appendChild(line);
+  });
 
   if(c.sections.length){
     const det=el('details');
