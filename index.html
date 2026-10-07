@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<meta name="build" content="20261007-2157">
+<meta name="build" content="20261007-2249">
 <title>十牛圖修行指南　編輯協作台</title>
 <style>
 :root{
@@ -76,6 +76,37 @@ h3{font-size:17px;margin:20px 0 8px;color:var(--ink)}
   border:1px solid var(--paper);background:transparent;color:var(--paper);
   border-radius:3px;cursor:pointer}
 .updbar button:hover{background:var(--paper);color:var(--ink)}
+.bar{height:5px;background:var(--line);border-radius:3px;margin:4px 0 10px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--ok)}
+.side a .n{float:right;color:var(--gold);font-size:12.5px}
+.partbar{margin:22px 0 10px;padding:6px 12px;background:var(--paper);
+  border-left:4px solid var(--ink);border-radius:2px;font-weight:700}
+.partbar .src{font-weight:400;font-size:12.5px;color:var(--gold);margin-left:8px}
+.revch{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--line);
+  border-radius:4px;padding:12px 15px;margin:0 0 9px}
+.revch.v-ok{border-left-color:var(--ok)}
+.revch.v-bad{border-left-color:var(--accent)}
+.revch.v-hold{border-left-color:var(--warn)}
+.revhd{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.revhd .chno{min-width:26px;text-align:center;font-size:12.5px;color:var(--paper);
+  background:var(--gold);border-radius:3px;padding:1px 5px}
+.revhd b{font-size:15.5px}
+.kind{font-size:11.5px;padding:1px 7px;border-radius:9px;border:1px solid var(--line);color:var(--ink2)}
+.kind.k-法門{border-color:var(--accent);color:var(--accent)}
+.kind.k-公案{border-color:var(--gold);color:var(--gold)}
+.revch details{margin:7px 0 0}
+.revch summary{cursor:pointer}
+.secs{margin:6px 0 0;padding-left:18px;font-size:14px;color:var(--ink2)}
+.secs li.hi{color:var(--ink)}
+.revch .opts{margin-top:9px}
+.opts button.ghost{border-style:dashed;color:var(--ink2)}
+.revmore{margin-top:9px;display:flex;flex-direction:column;gap:7px}
+.revmore .ti,.revmore select,.revmore textarea{font:inherit;font-size:14px;padding:6px 9px;
+  border:1px solid var(--line);border-radius:3px;background:var(--paper);color:var(--ink)}
+.revmore textarea{min-height:52px;resize:vertical}
+.revmore button{align-self:flex-start;font:inherit;font-size:14px;padding:5px 14px;
+  border:1px solid var(--ink);background:var(--ink);color:var(--paper);border-radius:3px;cursor:pointer}
+nav button.dim{opacity:.55}
 .warnbox{border-left:4px solid var(--accent)}
 .warnbox b{color:var(--accent)}
 .warnbox .use{color:var(--ink2);font-size:14.5px;margin:6px 0 0}
@@ -149,11 +180,12 @@ footer{border-top:1px solid var(--line);color:var(--ink2);font-size:13px;padding
   <div><h1>十牛圖修行指南　編輯協作台</h1>
        <div class="sub" id="hsub"></div></div>
   <nav>
-    <button data-v="todo" class="on">待裁示</button>
-    <button data-v="arch">架構草案</button>
+    <button data-v="rev" class="on">架構審核</button>
+    <button data-v="arch">架構草案全文</button>
     <button data-v="book">十冊撰稿本</button>
     <button data-v="koan">公案總帳</button>
     <button data-v="ppl">人物事例</button>
+    <button data-v="todo" class="dim">舊裁示 212</button>
   </nav>
   <input id="who" placeholder="你的名字">
   <span id="sync">—</span>
@@ -163,7 +195,7 @@ footer{border-top:1px solid var(--line);color:var(--ink2);font-size:13px;padding
 </div>
 
 <script src="config.js"></script>
-<script src="payload.enc.js"></script>
+<script src="payload.enc.js?v=20261007-2249"></script>
 <script>
 const CN='一二三四五六七八九十'.split('');
 let P=null, WHO='', STATE={}, API='', TOKEN='', SYNCOK=null;
@@ -261,7 +293,12 @@ function start(){
   $('#who').oninput=e=>{WHO=e.target.value.trim();localStorage.setItem('tenox_who',WHO);};
   const nsec=P.vols.reduce((n,v)=>n+v.chapters.reduce((m,c)=>m+c.sections.length,0),0);
   const nmat=P.vols.reduce((n,v)=>n+v.chapters.reduce((m,c)=>m+c.sections.reduce((k,s)=>k+s.m.length,0),0),0);
-  $('#hsub').textContent=`十冊 ${nsec} 節・${nmat} 則素材・公案總帳 ${P.ledger.rows.length} 則・待裁示 ${P.decisions.length} 項`;
+  const nch=(P.arch&&P.arch.vols&&P.arch.vols[0].parts)
+    ? P.arch.vols.reduce((k,v)=>k+v.nch,0) : 0;
+  $('#hsub').textContent=
+    (nch?`新架構 B 組體例　十冊 ${nch} 章・`:'')+
+    `素材池：舊撰稿本 ${nsec} 節／公案總帳 ${P.ledger.rows.length} 則`+
+    `　（舊裁示 ${P.decisions.length} 項暫不處理，等架構定案）`;
   document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
     setView(b.dataset.v); render(); window.scrollTo(0,0);});
   pull(); render(); checkUpdate();
@@ -284,14 +321,137 @@ async function checkUpdate(){
     document.body.insertBefore(bar,document.body.firstChild);
   }catch(e){}
 }
-let VIEW='todo', F={kind:'',vol:'',st:'',q:''};
+let VIEW='rev', F={kind:'',vol:'',st:'',q:''};
 
 function setView(name){
   VIEW=name;
   document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===name));
 }
 function render(){ const v=$('#view'); v.innerHTML='';
-  ({todo:vTodo,arch:vArch,book:vBook,koan:vKoan,ppl:vPpl})[VIEW](v); }
+  ({rev:vRev,todo:vTodo,arch:vArch,book:vBook,koan:vKoan,ppl:vPpl})[VIEW](v); }
+
+/* ── 架構審核 ──
+   逐章裁示新架構。id 用 ac<冊>-<章>，走既有的 push()，
+   後端修好之後會自動跟著同步，不必再改這裡。 */
+let REVVOL=1, REVONLY=false;
+const RV={ok:'通過',bad:'有問題',hold:'待議'};
+
+function revStats(){
+  const A=P.arch, out={};
+  let done=0, tot=0;
+  A.vols.forEach(v=>{
+    let d=0;
+    v.parts.forEach(p=>p.chapters.forEach(c=>{ if(STATE['ac'+v.n+'-'+c.num]) d++; }));
+    out[v.n]={done:d, tot:v.nch}; done+=d; tot+=v.nch;
+  });
+  out.all={done,tot};
+  return out;
+}
+
+function vRev(root){
+  const A=P.arch;
+  if(!A||!A.vols||!A.vols[0].parts){
+    root.appendChild(el('div','card','<p>這一版 payload 還沒有架構資料。請重跑 build_payload.py。</p>')); return; }
+  const st=revStats();
+
+  const cols=el('div','cols'); root.appendChild(cols);
+  const side=el('div','side'); cols.appendChild(side);
+  const body=el('div'); cols.appendChild(body);
+
+  side.appendChild(el('div','grp',`全書 ${st.all.done} / ${st.all.tot} 章`));
+  side.appendChild(el('div','bar',`<i style="width:${st.all.tot?st.all.done/st.all.tot*100:0}%"></i>`));
+  A.vols.forEach(v=>{
+    const s=st[v.n];
+    const a=el('a',REVVOL===v.n?'on':null,
+      `第${CN[v.n-1]}冊　${v.name}<span class="n">${s.done}/${s.tot}</span>`);
+    a.href='javascript:void 0';
+    a.onclick=()=>{REVVOL=v.n;render();window.scrollTo(0,0);};
+    side.appendChild(a);
+  });
+
+  const v=A.vols.find(x=>x.n===REVVOL), s=st[REVVOL];
+  const head=el('div','card',
+    `<h3 style="margin:0">第${CN[v.n-1]}冊　${esc(v.name)}</h3>`+
+    `<p class="sub">${v.parts.length} 部・${v.nch} 章　|　已審 <b>${s.done}</b>／${s.tot}</p>`+
+    (v.note?`<p class="use" style="color:var(--warn)">${esc(v.note)}</p>`:''));
+  const tools=el('div','io');
+  const bOnly=el('button',REVONLY?'pick':null,REVONLY?'只看未審（開）':'只看未審');
+  bOnly.onclick=()=>{REVONLY=!REVONLY;render();};
+  const bAll=el('button',null,'本冊全部標通過');
+  bAll.onclick=()=>{
+    const n=v.parts.reduce((k,p)=>k+p.chapters.filter(c=>!STATE['ac'+v.n+'-'+c.num]).length,0);
+    if(!n) return alert('本冊已經審完了');
+    if(!confirm(`把本冊還沒審的 ${n} 章全部標成「通過」？`)) return;
+    v.parts.forEach(p=>p.chapters.forEach(c=>{
+      const id='ac'+v.n+'-'+c.num;
+      if(!STATE[id]) push(id,{v:'ok',who:WHO,at:new Date().toISOString()});
+    }));
+  };
+  tools.appendChild(bOnly); tools.appendChild(bAll);
+  head.appendChild(tools); body.appendChild(head);
+
+  v.parts.forEach(part=>{
+    const chs=part.chapters.filter(c=>!REVONLY||!STATE['ac'+v.n+'-'+c.num]);
+    if(!chs.length) return;
+    body.appendChild(el('div','partbar',
+      `${esc(part.title)}<span class="src">${esc(part.src)}</span>`));
+    chs.forEach(c=>body.appendChild(revCard(v,c)));
+  });
+  if(REVONLY && !body.querySelector('.revch'))
+    body.appendChild(el('div','card','<p class="sub">本冊沒有未審的章了。</p>'));
+}
+
+function revCard(v,c){
+  const id='ac'+v.n+'-'+c.num, rec=STATE[id]||null;
+  const d=el('div','revch'+(rec?' done v-'+rec.v:''));
+  const title=rec&&rec.t?rec.t:c.title;
+  d.appendChild(el('div','revhd',
+    `<span class="chno">${c.num}</span>`+
+    `<span class="kind k-${c.kind}">${c.kind}</span>`+
+    `<b>${esc(title)}</b>`+
+    (rec&&rec.t?`<span class="badge">標題已改</span>`:'')+
+    (rec&&rec.mv?`<span class="badge f">移到第${CN[rec.mv-1]}冊</span>`:'')));
+
+  if(c.sections.length){
+    const det=el('details');
+    det.innerHTML=`<summary class="sub">${c.sections.length} 節</summary>`+
+      '<ul class="secs">'+c.sections.map(s=>
+        `<li class="${s.kind==='法門'||s.kind==='公案'?'hi':''}">${esc(s.t)}</li>`).join('')+'</ul>';
+    d.appendChild(det);
+  }
+
+  const opts=el('div','opts');
+  Object.keys(RV).forEach(k=>{
+    const b=el('button',rec&&rec.v===k?'pick':null,RV[k]);
+    b.onclick=()=>push(id,Object.assign({},rec,{v:k,who:WHO,at:new Date().toISOString()}));
+    opts.appendChild(b);
+  });
+  const more=el('button','ghost','改標題／搬冊／註記');
+  const box=el('div','revmore hide');
+  more.onclick=()=>box.classList.toggle('hide');
+  opts.appendChild(more);
+  if(rec){ const bx=el('button','ghost','取消這章的裁示');
+    bx.onclick=()=>{ if(confirm('取消這一章的裁示？')){ delete STATE[id]; save(); render(); } };
+    opts.appendChild(bx); }
+  d.appendChild(opts);
+
+  const ti=el('input'); ti.placeholder='改成新的章標題（留空＝不改）';
+  ti.value=(rec&&rec.t)||''; ti.className='ti';
+  const mv=el('select');
+  mv.innerHTML='<option value="">不搬冊</option>'+CN.map((x,i)=>
+    `<option value="${i+1}" ${rec&&rec.mv==i+1?'selected':''}>移到第${x}冊</option>`).join('');
+  const nt=el('textarea'); nt.placeholder='為什麼（給其他人看的理由）';
+  nt.value=(rec&&rec.note)||'';
+  const sv=el('button',null,'存這一章');
+  sv.onclick=()=>push(id,{v:(rec&&rec.v)||'bad', t:ti.value.trim(),
+    mv:mv.value?+mv.value:0, note:nt.value.trim(), who:WHO, at:new Date().toISOString()});
+  box.appendChild(ti); box.appendChild(mv); box.appendChild(nt); box.appendChild(sv);
+  d.appendChild(box);
+
+  if(rec&&rec.note) d.appendChild(el('div','meta','理由：'+esc(rec.note)));
+  if(rec&&rec.who)  d.appendChild(el('div','meta',`${esc(rec.who)}　${esc((rec.at||'').slice(0,16).replace('T',' '))}`));
+  return d;
+}
 
 /* ── 架構草案（B 組體例）── */
 function mdInline(s){
