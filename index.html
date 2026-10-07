@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
+<meta name="build" content="20261007-2152">
 <title>十牛圖修行指南　編輯協作台</title>
 <style>
 :root{
@@ -69,6 +70,12 @@ h3{font-size:17px;margin:20px 0 8px;color:var(--ink)}
 .io button{font:inherit;font-size:13.5px;padding:5px 12px;border:1px solid var(--line);
   background:var(--paper);color:var(--ink);border-radius:3px;cursor:pointer}
 .io button:hover{background:var(--ink);color:var(--paper)}
+.updbar{position:fixed;left:0;right:0;bottom:0;z-index:99;text-align:center;
+  background:var(--ink);color:var(--paper);padding:9px 14px;font-size:14px}
+.updbar button{font:inherit;font-size:13.5px;margin-left:4px;padding:3px 12px;
+  border:1px solid var(--paper);background:transparent;color:var(--paper);
+  border-radius:3px;cursor:pointer}
+.updbar button:hover{background:var(--paper);color:var(--ink)}
 .warnbox{border-left:4px solid var(--accent)}
 .warnbox b{color:var(--accent)}
 .warnbox .use{color:var(--ink2);font-size:14.5px;margin:6px 0 0}
@@ -237,7 +244,25 @@ function start(){
   $('#hsub').textContent=`十冊 ${nsec} 節・${nmat} 則素材・公案總帳 ${P.ledger.rows.length} 則・待裁示 ${P.decisions.length} 項`;
   document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
     setView(b.dataset.v); render(); window.scrollTo(0,0);});
-  pull(); render();
+  pull(); render(); checkUpdate();
+}
+
+/* GitHub Pages 的 HTML 會被快取 10 分鐘，瀏覽器自己還會再留一份，
+   結果是改好的東西使用者看不到（2026-10-06 就發生過）。
+   這裡繞過快取抓一次自己，版本不同就請他按一下。 */
+async function checkUpdate(){
+  const here=(document.querySelector('meta[name=build]')||{}).content||'DEV';
+  if(here==='DEV') return;
+  try{
+    const r=await fetch(location.pathname+'?_='+Date.now(),{cache:'no-store'});
+    const m=(await r.text()).match(/name="build" content="([^"]*)"/);
+    if(!m||m[1]===here) return;
+    const bar=el('div','updbar',`協作台有新版本（${m[1]}）　`);
+    const b=el('button',null,'點這裡更新');
+    b.onclick=()=>location.replace(location.pathname+'?v='+m[1]);
+    bar.appendChild(b);
+    document.body.insertBefore(bar,document.body.firstChild);
+  }catch(e){}
 }
 let VIEW='todo', F={kind:'',vol:'',st:'',q:''};
 

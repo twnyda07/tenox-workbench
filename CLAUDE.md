@@ -34,11 +34,19 @@
 
 ```bash
 cd ~/十牛圖出版/協作版
-git -C build fetch && git -C build status   # 一定要先做，見下方
-python3 build_payload.py                    # 由 共用/工作流結果/ 重建 payload.json
-python3 encrypt.py                          # 加密後直接寫進 build/payload.enc.js
-cd build && git add -A && git commit -m "…" && git push
+python3 build_payload.py     # 由 共用/工作流結果/ 重建 payload.json
+python3 encrypt.py           # 加密後直接寫進 build/payload.enc.js
+./發佈.sh "commit 訊息"       # 先 fetch 擋住落後、蓋版本戳、commit、push、等 Pages 生效
 ```
+
+**用 `發佈.sh`，不要自己 commit push。** 它做兩件手動容易漏的事：
+落後遠端時直接擋下來，以及蓋版本戳。
+
+版本戳是 `<meta name="build">`，給前端的 `checkUpdate()` 用。
+GitHub Pages 的 HTML `cache-control: max-age=600`，瀏覽器自己還會再留一份，
+不蓋戳的話改好的東西對方要硬重新整理才看得到——2026-10-06 就發生過，
+使用者在另一台打開協作台，新加的匯出鈕完全看不到。
+現在版本一變，頁面底部會出現「協作台有新版本，點這裡更新」。
 
 **動手前一定要先 `git fetch`。** 不只一個 session 在推這個 repo，而且是跨電腦的。
 2026-10-06 就發生過：上層 `協作版/` 停在三天前的版本，照舊流程 `cp index.html build/`
