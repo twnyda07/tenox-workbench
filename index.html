@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<meta name="build" content="20261008-0024">
+<meta name="build" content="20261008-0029">
 <title>十牛圖修行指南　編輯協作台</title>
 <style>
 :root{
@@ -96,6 +96,7 @@ h3{font-size:17px;margin:20px 0 8px;color:var(--ink)}
 .kind{font-size:11.5px;padding:1px 7px;border-radius:9px;border:1px solid var(--line);color:var(--ink2)}
 .kind.k-法門{border-color:var(--accent);color:var(--accent)}
 .kind.k-公案{border-color:var(--gold);color:var(--gold)}
+.chnote{margin:6px 0 0;font-size:13px;color:var(--warn)}
 .chwarn{margin:7px 0 0;padding:6px 10px;background:var(--paper);
   border-left:3px solid var(--warn);border-radius:2px;font-size:13.5px;color:var(--ink2)}
 .revch details{margin:7px 0 0}
@@ -199,7 +200,7 @@ footer{border-top:1px solid var(--line);color:var(--ink2);font-size:13px;padding
 </div>
 
 <script src="config.js"></script>
-<script src="payload.enc.js?v=20261008-0024"></script>
+<script src="payload.enc.js?v=20261008-0029"></script>
 <script>
 const CN='一二三四五六七八九十'.split('');
 let P=null, WHO='', STATE={}, API='', TOKEN='', SYNCOK=null;
@@ -419,6 +420,8 @@ function revCard(v,c){
     `<b>${esc(title)}</b>`+
     (rec&&rec.t?`<span class="badge">標題已改</span>`:'')+
     (rec&&rec.mv?`<span class="badge f">移到第${CN[rec.mv-1]}冊</span>`:'')));
+
+  if(c.note) d.appendChild(el('div','chnote','※ '+esc(c.note.replace(/\*\*/g,''))));
 
   /* 兩冊都寫成完整敘述 —— 規則是一則只能一冊完整講，審到這裡要擇一 */
   if(c.warn) c.warn.forEach(w=>{
