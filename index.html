@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<meta name="build" content="20261007-2152">
+<meta name="build" content="20261007-2157">
 <title>十牛圖修行指南　編輯協作台</title>
 <style>
 :root{
@@ -215,8 +215,19 @@ async function pull(){
          headers:{'Content-Type':'text/plain;charset=utf-8'},
          body:JSON.stringify({action:'list',token:TOKEN})});
        const j=await r.json();
-       if(j.ok){ STATE=j.data||{}; SYNCOK=true; save(); note('已同步'); render(); }
-       else { SYNCOK=false; note('後端未認證'); render(); } }
+       if(!j.ok){ SYNCOK=false; note('後端未認證'); render(); return; }
+
+       const remote=j.data||{}, nR=Object.keys(remote).length, nL=Object.keys(STATE).length;
+       /* 絕對不要用後端的資料「取代」本機。
+          舊版寫 STATE=j.data||{} 再 save()，後端是空的時候，
+          每開一次協作台就把本機裁示清空並寫回 localStorage。
+          2026-10-06 使用者在 venjianhui 那台的 212 項裁示就是這樣消失的。
+          寧可不同步，也不要毀掉本機資料。 */
+       if(nR===0 && nL>0){
+         SYNCOK=false; note(`後端是空的，已保留本機 ${nL} 項`); render(); return;
+       }
+       STATE=Object.assign({},STATE,remote);   /* 合併，不是取代 */
+       SYNCOK=true; save(); note('已同步'); render(); }
   catch(e){ SYNCOK=false; note('後端連不上'); render(); }
 }
 async function push(id,rec){
@@ -236,6 +247,15 @@ const note=t=>$('#sync').textContent=t;
 function start(){
   $('#gate').classList.add('hide'); $('#app').classList.remove('hide');
   API=(window.__API__||''); STATE=JSON.parse(localStorage.getItem('tenox_state')||'{}');
+  /* 開啟時先留一份快照（保留最近 5 份），任何覆蓋都還有回頭路 */
+  try{
+    if(Object.keys(STATE).length){
+      localStorage.setItem('tenox_bak_'+new Date().toISOString().slice(0,19).replace(/[:T]/g,''),
+                           JSON.stringify(STATE));
+      const baks=Object.keys(localStorage).filter(k=>k.startsWith('tenox_bak_')).sort();
+      while(baks.length>5) localStorage.removeItem(baks.shift());
+    }
+  }catch(e){}
   WHO=localStorage.getItem('tenox_who')||'';
   $('#who').value=WHO;
   $('#who').oninput=e=>{WHO=e.target.value.trim();localStorage.setItem('tenox_who',WHO);};
