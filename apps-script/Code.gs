@@ -67,5 +67,66 @@ function doPost(e) {
   e.parameter = e.parameter || {};
   e.parameter.action = body.action;
 
+  // 讀取（list）本來就是 doGet_ 的工作。前端改走 POST 之後要在這裡轉接，
+  // 否則會掉進只認得 set／del 的 doPost_，回 bad request。
+  if (body.action === 'list') return doGet_(e);
+
   return doPost_(e);
+}
+
+/** 十牛圖修行指南　編輯協作台　後端
+ *  資料存在同一份試算表的「裁示」分頁。只存 id／判定／註記／決定者／時間，不存內文。 */
+const SHEET = '裁示';
+const HEAD = ['id', 'v', 'note', 'who', 'at'];
+
+function sheet_() {
+  const ss = SpreadsheetApp.getActive();
+  let sh = ss.getSheetByName(SHEET);
+  if (!sh) { sh = ss.insertSheet(SHEET); sh.appendRow(HEAD); }
+  if (sh.getLastRow() === 0) sh.appendRow(HEAD);
+  return sh;
+}
+
+function out_(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function doGet_(e) {
+  const sh = sheet_();
+  const n = sh.getLastRow();
+  const data = {};
+  if (n > 1) {
+    sh.getRange(2, 1, n - 1, HEAD.length).getValues().forEach(function (r) {
+      if (!r[0]) return;
+      data[r[0]] = { v: r[1], note: r[2], who: r[3], at: r[4] };
+    });
+  }
+  return out_({ ok: true, data: data, count: Object.keys(data).length });
+}
+
+function doPost_(e) {
+  try {
+    const b = JSON.parse(e.postData.contents);
+    if (!b.id || (b.action !== 'set' && b.action !== 'del'))
+      return out_({ ok: false, err: 'bad request' });
+    const lock = LockService.getScriptLock();
+    lock.waitLock(20000);
+    try {
+      const sh = sheet_();
+      const n = sh.getLastRow();
+      const rec = [b.id, b.v || '', b.note || '', b.who || '未具名', b.at || new Date().toISOString()];
+      let row = 0;
+      if (n > 1) {
+        const ids = sh.getRange(2, 1, n - 1, 1).getValues();
+        for (let i = 0; i < ids.length; i++) if (ids[i][0] === b.id) { row = i + 2; break; }
+      }
+      if (b.action === 'del') { if (row) sh.deleteRow(row); }
+      else if (row) sh.getRange(row, 1, 1, HEAD.length).setValues([rec]);
+      else sh.appendRow(rec);
+    } finally { lock.releaseLock(); }
+    return out_({ ok: true });
+  } catch (err) {
+    return out_({ ok: false, err: String(err) });
+  }
 }
