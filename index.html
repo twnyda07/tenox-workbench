@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="robots" content="noindex,nofollow">
-<meta name="build" content="20261008-0836">
+<meta name="build" content="20261112-2219">
 <title>十牛圖修行指南　編輯協作台</title>
 <style>
 :root{
@@ -172,6 +172,16 @@ th{background:var(--paper)}
 .stat b{color:var(--ink);font-size:17px}
 .hide{display:none}
 footer{border-top:1px solid var(--line);color:var(--ink2);font-size:13px;padding:14px 0;text-align:center}
+/* 本站資訊（寶嚴禪寺所有開發一律附） */
+.siteinfo{margin:30px auto 0; max-width:720px; text-align:left; font-size:16px; line-height:1.85;
+  background:var(--card); border:1px solid var(--line); border-radius:4px; padding:16px 20px; color:inherit;}
+.siteinfo .si-h{color:var(--accent); font-weight:700; letter-spacing:.12em; margin-bottom:6px;}
+.siteinfo dl{display:grid; grid-template-columns:max-content 1fr; gap:4px 12px; margin:0;}
+.siteinfo dt{color:var(--ink2); white-space:nowrap;}
+.siteinfo dd{margin:0; word-break:break-word;}
+.siteinfo a{color:var(--accent); text-decoration:underline; text-underline-offset:3px; display:inline-block; padding:6px 0; margin:-6px 0;}
+@media(max-width:420px){ .siteinfo dl{grid-template-columns:1fr; gap:0;} .siteinfo dd{margin-bottom:6px;} }
+.gate .siteinfo{margin-top:22px; padding:12px 14px; font-size:15px; line-height:1.75}
 </style>
 </head>
 <body>
@@ -181,6 +191,15 @@ footer{border-top:1px solid var(--line);color:var(--ink2);font-size:13px;padding
   <p><input id="pw" type="password" autocomplete="current-password" placeholder="密碼">
      <button id="go">進入</button></p>
   <p class="err" id="err"></p>
+<section class="siteinfo" aria-label="本站資訊">
+  <div class="si-h">本站資訊</div>
+  <dl>
+    <dt>名稱：</dt><dd>十牛圖修行指南　編輯協作台</dd>
+    <dt>網址：</dt><dd><a href="https://twnyda07.github.io/tenox-workbench/">twnyda07.github.io/tenox-workbench</a></dd>
+    <dt>特別功能：</dt><dd>分頁瀏覽架構草案、十冊撰稿本、公案總帳與人物事例，並可署名下判定、大家同步看到；需輸入密碼才能進入。</dd>
+    <dt>創作者／版權所有：</dt><dd>© 2026 寶嚴山寶嚴禪寺　保留一切權利</dd>
+  </dl>
+</section>
 </div>
 
 <div id="app" class="hide">
@@ -200,10 +219,21 @@ footer{border-top:1px solid var(--line);color:var(--ink2);font-size:13px;padding
 </div></header>
 <main><div class="wrap" id="view"></div></main>
 <footer>見輝法師禪七開示 85 篇・139 萬字　|　內容僅供編輯團隊內部使用，請勿外傳</footer>
+<div class="wrap">
+<section class="siteinfo" aria-label="本站資訊">
+  <div class="si-h">本站資訊</div>
+  <dl>
+    <dt>名稱：</dt><dd>十牛圖修行指南　編輯協作台</dd>
+    <dt>網址：</dt><dd><a href="https://twnyda07.github.io/tenox-workbench/">twnyda07.github.io/tenox-workbench</a></dd>
+    <dt>特別功能：</dt><dd>分頁瀏覽架構草案、十冊撰稿本、公案總帳與人物事例，並可署名下判定、大家同步看到；需輸入密碼才能進入。</dd>
+    <dt>創作者／版權所有：</dt><dd>© 2026 寶嚴山寶嚴禪寺　保留一切權利</dd>
+  </dl>
+</section>
+</div>
 </div>
 
 <script src="config.js"></script>
-<script src="payload.enc.js?v=20261008-0836"></script>
+<script src="payload.enc.js?v=20261112-2219"></script>
 <script>
 const CN='一二三四五六七八九十'.split('');
 let P=null, WHO='', STATE={}, API='', TOKEN='', SYNCOK=null, SEEDADD=0;
